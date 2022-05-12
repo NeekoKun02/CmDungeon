@@ -13,7 +13,9 @@
 #define f_c 25
 #define r 15
 #define c 15
-#define zones 9
+#define x_d 5
+#define y_d 3
+#define zones 10
 #define KEY_UP 72
 #define KEY_DOWN 80
 #define KEY_LEFT 75
@@ -238,6 +240,10 @@ void get_sample(int n, char M[r][c]) {
 			myFile.open("data/zone_09.txt");
 			break;
 		}
+		case 10: {
+			myFile.open("data/zone_10.txt");
+			break;
+		}
 	}
 	
 	for(int i=0; i<r; i++) {
@@ -342,10 +348,10 @@ void generate_floor(int level) {
 	}
 }
 
-void generateMap(char miniMap[(f_r*2)+6][(f_c*4)+6]) {
+void generateMap(miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
 	
-	for(int i=0; i<(f_r*2)+6; i++){												// generate base frame for map
-		for(int j=0; j<(f_c*4)+6; j++){
+	for(int i=0; i<(f_r*2)+y_d*2; i++){												// generate base frame for map
+		for(int j=0; j<(f_c*4)+x_d*2; j++){
 			miniMap[i][j] = ' ';
 			if(i == 0 || i == (f_r*2)+5)
 				miniMap[i][j] = LR;
@@ -437,34 +443,34 @@ void generateMap(char miniMap[(f_r*2)+6][(f_c*4)+6]) {
 
 void showMap() {
 	char input;
-	char miniMap[(f_r*2)+6][(f_c*4)+6];
+	char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2];
 	int x, y;
 	system("CLS");
 	setCursorPosition(0, 0);
 	
 	generateMap(miniMap);
 	
-	for(int i=0; i<(f_r*2)+6; i++){
-		for(int j=0; j<(f_c*4)+6; j++){
-			if(j<3 || j>(f_c*4+6)-4 || i<3 || i>(f_r*2+6)-4)
+	for(int i=0; i<(f_r*2)+y_d*2; i++){
+		for(int j=0; j<(f_c*4)+x_d*2; j++){
+			if(j<3 || j>(f_c*4+x_d*2)-4 || i<3 || i>(f_r*2+y_d*2)-4)
 				cout<<miniMap[i][j];
 				// If it is a corner:
 			else if((miniMap[i][j] == TUL) || (miniMap[i][j] == TUR) || (miniMap[i][j] == TDL) || (miniMap[i][j] == TDR) || (miniMap[i][j] == TUDLR) || (miniMap[i][j] == TUDL) || (miniMap[i][j] == TUDR) || (miniMap[i][j] == TULR) || miniMap[i][j] == TDLR){
-				if(map.floor[(i-3)/2][(j-3)/4].discovered || map.floor[((i-3)/2)-1][(j-3)/4].discovered || map.floor[(i-3)/2][((j-3)/4)-1].discovered || map.floor[((i-3)/2)-1][((j-3)/4)-1].discovered)
+				if(map.floor[(i-y_d)/2][(j-x_d)/4].discovered || map.floor[((i-y_d)/2)-1][(j-x_d)/4].discovered || map.floor[(i-y_d)/2][((j-x_d)/4)-1].discovered || map.floor[((i-y_d)/2)-1][((j-x_d)/4)-1].discovered)
 					cout<<miniMap[i][j];
 				else
 					cout<<' ';
 			}
 				// If it is a vertical pipe:
 			else if(miniMap[i][j] == TUD || miniMap[i][j] == UD){
-				if(map.floor[(i-4)/2][(j-3)/4].discovered || map.floor[(i-4)/2][(j-3)/4-1].discovered)
+				if(map.floor[(i-y_d-1)/2][(j-x_d)/4].discovered || map.floor[(i-y_d-1)/2][(j-x_d)/4-1].discovered)
 					cout<<miniMap[i][j];
 				else
 					cout<<' ';	
 			}
 				// If it is an orizontal pipe
 			else if(miniMap[i][j] == TLR || miniMap[i][j] == LR) {
-				if(map.floor[(i-3-(i%2))/2][(j-3)/4].discovered || map.floor[(i-3-(i%2))/2+1][(j-3)/4].discovered)
+				if(map.floor[(i-y_d-(i%2))/2][(j-x_d)/4].discovered || map.floor[(i-y_d-(i%2))/2+1][(j-x_d)/4].discovered)
 					cout<<miniMap[i][j];
 				else
 					cout<<' ';
@@ -481,7 +487,7 @@ void showMap() {
 			}
 				// If a character:
 			else{
-				if(map.floor[(i-4)/2][(j-5)/4].discovered)
+				if(map.floor[(i-y_d-1)/2][(j-x_d-2)/4].discovered)
 					cout<<miniMap[i][j];
 				else
 					cout<<' ';
@@ -495,53 +501,85 @@ void showMap() {
 	return;
 }
 
+void konamiCode() {
+	for(int i=0; i<f_r; i++){
+		for(int j=0; j<f_c; j++)
+			map.floor[i][j].discovered = true;
+	}
+}
+
+int n;
+
 void action(char zone[r][c], char input) {
 	char a;
 	switch(input) {
 		case 'w': {
-	
+			n=0;
 			player1.move(zone, 1);
 			break;
 		}
 		case KEY_UP: {
-		
+			if(n < 2)
+				n++;
+			else
+				n=0;
 			player1.move(zone, 1);
 			break;
 		}
 		case 'a': {
-	
+			if(n == 8)
+				n++;
+			else
+				n=0;		
 			player1.move(zone, 2);
 			break;
 		}
+		case 'b': {
+			if(n == 9)
+				n++;
+			else
+				n=0;
+			break;
+		}
 		case KEY_LEFT: {
-		
+			if(n == 4 || n == 6)
+				n++;
+			else
+				n=0;
 			player1.move(zone, 2);
 			break;
 		}
 		case 's': {
-	
+			n=0;
 			player1.move(zone, 3);
 			break;
 		}
 		case KEY_DOWN: {
-		
+			if(n<4 && n>1)
+				n++;
+			else
+				n=0;
 			player1.move(zone, 3);
 			break;
 		}
 		case 'd': {
-	
+			n=0;
 			player1.move(zone, 4);
 			break;
 		}
 		case KEY_RIGHT: {
-	
+			if(n == 5 || n == 7)
+				n++;
+			else
+				n=0;
 			player1.move(zone, 4);
 			break;
 		}
 		case 'x': {
-			showConsoleCursor(true);
+			n=0;
 			system("CLS");
 			cout << "Are you sure you want to exit? Every unsaved progresses will be lost (Y/N)";
+			showConsoleCursor(true);
 			a = getch();
 			if(a == 'y' || a == 'Y')
 				shutdown();
@@ -556,6 +594,21 @@ void action(char zone[r][c], char input) {
 			break;
 		}
 	}
+	if(n == 10)
+		konamiCode();
+}
+
+void setConsoleFontSize(int x, int y) {
+	CONSOLE_FONT_INFOEX cfi;
+	cfi.cbSize = sizeof(cfi);
+	cfi.nFont = 0;
+	cfi.dwFontSize.X = x;                   // Width of each character in the font
+	cfi.dwFontSize.Y = y;                  // Height
+	cfi.FontFamily = FF_DONTCARE;
+	cfi.FontWeight = FW_NORMAL;
+	std::wcscpy(cfi.FaceName, L"Consolas"); // Choose your font
+	SetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &cfi);
+	
 }
 
 int main() {
@@ -567,6 +620,8 @@ int main() {
 	showConsoleCursor(false);
 	ShowWindow(GetConsoleWindow(),SW_MAXIMIZE);
 	SendMessage(GetConsoleWindow(),WM_SYSKEYDOWN,VK_RETURN,0x20000000);
+	
+	setConsoleFontSize(15, 34);
 
 	generate_floor(1);
 	
