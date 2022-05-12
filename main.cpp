@@ -348,22 +348,22 @@ void generate_floor(int level) {
 	}
 }
 
-void generateMap(miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
+void generateMap(char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
 	
 	for(int i=0; i<(f_r*2)+y_d*2; i++){												// generate base frame for map
 		for(int j=0; j<(f_c*4)+x_d*2; j++){
 			miniMap[i][j] = ' ';
-			if(i == 0 || i == (f_r*2)+5)
+			if(i == 0 || i == (f_r*2)+y_d*2-1)
 				miniMap[i][j] = LR;
-			if(j == 0 || j == (f_c*4)+5)
+			if(j == 0 || j == (f_c*4)+x_d*2-1)
 				miniMap[i][j] = UD;
 			if(i == 0 && j == 0)
 				miniMap[i][j] =  DR;
-			if(i == 0 && j == (f_c*4)+5)
+			if(i == 0 && j == (f_c*4)+x_d*2-1)
 				miniMap[i][j] = DL;
-			if(i == (f_r*2)+5 && j == 0)
+			if(i == (f_r*2)+y_d*2-1 && j == 0)
 				miniMap[i][j] = UR;
-			if(i == (f_r*2)+5 && j == (f_c*4)+5)
+			if(i == (f_r*2)+y_d*2-1 && j == (f_c*4)+x_d*2-1)
 				miniMap[i][j] = UL;
 		}
 	}
@@ -372,70 +372,70 @@ void generateMap(miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
 		for(int j=0; j<f_c; j++) {
 			if(map.floor[i][j].zoneType != -1) {
 				
-				if(miniMap[(2*i)+3][(4*j)+3] == TDL)
-					miniMap[(2*i)+3][(4*j)+3] = TDLR;
-				else if(miniMap[(2*i)+3][(4*j)+3] == TUL || miniMap[(2*i)+3][(4*j)+3] == TULR || miniMap[(2*i)+3][(4*j)+3] == TUDL)
-					miniMap[(2*i)+3][(4*j)+3] = TUDLR;
-				else if(miniMap[(2*i)+3][(4*j)+3] == TUR)
-					miniMap[(2*i)+3][(4*j)+3] = TUDR;
-				else if(miniMap[(2*i)+3][(4*j)+3] == ' ')
-					miniMap[(2*i)+3][(4*j)+3] = TDR;
+				if(miniMap[(2*i)+y_d][(4*j)+x_d] == TDL)
+					miniMap[(2*i)+y_d][(4*j)+x_d] = TDLR;
+				else if(miniMap[(2*i)+y_d][(4*j)+x_d] == TUL || miniMap[(2*i)+y_d][(4*j)+x_d] == TULR || miniMap[(2*i)+y_d][(4*j)+x_d] == TUDL)
+					miniMap[(2*i)+y_d][(4*j)+x_d] = TUDLR;
+				else if(miniMap[(2*i)+y_d][(4*j)+x_d] == TUR)
+					miniMap[(2*i)+y_d][(4*j)+x_d] = TUDR;
+				else if(miniMap[(2*i)+y_d][(4*j)+x_d] == ' ')
+					miniMap[(2*i)+y_d][(4*j)+x_d] = TDR;
 				
 				////////////////////////////////////////////////////////////////
 				
-				miniMap[(2*i)+3][(4*j)+4] = TLR;
-				miniMap[(2*i)+3][(4*j)+6] = TLR;
-				if(miniMap[(2*i)+3][(4*j)+5] == TLR)
-					miniMap[(2*i)+3][(4*j)+5] = LR;
+				miniMap[(2*i)+y_d][(4*j)+x_d+1] = TLR;
+				miniMap[(2*i)+y_d][(4*j)+x_d+3] = TLR;
+				if(miniMap[(2*i)+y_d][(4*j)+x_d+2] == TLR)
+					miniMap[(2*i)+y_d][(4*j)+x_d+2] = LR;
 				else
-					miniMap[(2*i)+3][(4*j)+5] = TLR;
+					miniMap[(2*i)+y_d][(4*j)+x_d+2] = TLR;
 					
 				////////////////////////////////////////////////////////////////
 				
-				if(miniMap[(2*i)+3][(4*j)+7] == TUR || miniMap[(2*i)+3][(4*j)+7] == TUDR || miniMap[(2*i)+3][(4*j)+7] == TULR)
-					miniMap[(2*i)+3][(4*j)+7] = TUDLR;
-				else if(miniMap[(2*i)+3][(4*j)+7] == TUL)
-					miniMap[(2*i)+3][(4*j)+7] = TUDL;
-				else if(miniMap[(2*i)+3][(4*j)+7] == ' ')
-					miniMap[(2*i)+3][(4*j)+7] = TDL;
+				if(miniMap[(2*i)+y_d][(4*j)+x_d+4] == TUR || miniMap[(2*i)+y_d][(4*j)+x_d+4] == TUDR || miniMap[(2*i)+y_d][(4*j)+x_d+4] == TULR)
+					miniMap[(2*i)+y_d][(4*j)+x_d+4] = TUDLR;
+				else if(miniMap[(2*i)+y_d][(4*j)+x_d+4] == TUL)
+					miniMap[(2*i)+y_d][(4*j)+x_d+4] = TUDL;
+				else if(miniMap[(2*i)+y_d][(4*j)+x_d+4] == ' ')
+					miniMap[(2*i)+y_d][(4*j)+x_d+4] = TDL;
 					
 				////////////////////////////////////////////////////////////////
 				
-				if(miniMap[(2*i)+4][(4*j)+7] == TUD)
-					miniMap[(2*i)+4][(4*j)+7] = UD;
+				if(miniMap[(2*i)+y_d+1][(4*j)+x_d+4] == TUD)
+					miniMap[(2*i)+y_d+1][(4*j)+x_d+4] = UD;
 				else
-					miniMap[(2*i)+4][(4*j)+7] = TUD;
+					miniMap[(2*i)+y_d+1][(4*j)+x_d+4] = TUD;
 					
-				if(miniMap[(2*i)+4][(4*j)+3] == TUD)
-					miniMap[(2*i)+4][(4*j)+3] = UD;
+				if(miniMap[(2*i)+y_d+1][(4*j)+x_d] == TUD)
+					miniMap[(2*i)+y_d+1][(4*j)+x_d] = UD;
 				else
-					miniMap[(2*i)+4][(4*j)+3] = TUD;
+					miniMap[(2*i)+y_d+1][(4*j)+x_d] = TUD;
 					
 				////////////////////////////////////////////////////////////////
 				
-				if(miniMap[(2*i)+5][(4*j)+3] == TUL)
-					miniMap[(2*i)+5][(4*j)+3] = TULR;
-				else if(miniMap[(2*i)+5][(4*j)+3] == ' ')
-					miniMap[(2*i)+5][(4*j)+3] = TUR;
+				if(miniMap[(2*i)+y_d+2][(4*j)+x_d] == TUL)
+					miniMap[(2*i)+y_d+2][(4*j)+x_d] = TULR;
+				else if(miniMap[(2*i)+y_d+2][(4*j)+x_d] == ' ')
+					miniMap[(2*i)+y_d+2][(4*j)+x_d] = TUR;
 					
 				////////////////////////////////////////////////////////////////
 				
-				miniMap[(2*i)+5][(4*j)+4] = TLR;
-				miniMap[(2*i)+5][(4*j)+6] = TLR;
-				miniMap[(2*i)+5][(4*j)+5] = TLR;
+				miniMap[(2*i)+y_d+2][(4*j)+x_d+1] = TLR;
+				miniMap[(2*i)+y_d+2][(4*j)+x_d+2] = TLR;
+				miniMap[(2*i)+y_d+2][(4*j)+x_d+3] = TLR;
 					
 				////////////////////////////////////////////////////////////////
 				
-				miniMap[(2*i)+5][(4*j)+7] = TUL;
+				miniMap[(2*i)+y_d+2][(4*j)+x_d+4] = TUL;
 				
 				////////////////////////////////////////////////////////////////
 				
 				if(i == player1.f_y && j == player1.f_x)
-					miniMap[(2*i)+4][(4*j)+5] = PLAYER;
+					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = PLAYER;
 				else if(map.floor[i][j].zoneType == 0)
-					miniMap[(2*i)+4][(4*j)+5] = 245;
+					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 245;
 				else
-					miniMap[(2*i)+4][(4*j)+5] = 126;
+					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 126;
 			}
 		}
 	}
