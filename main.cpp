@@ -5,7 +5,7 @@
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
-
+#include "Enemy.h"
 #define WIN32_LEAN_AND_MEAN
 #define SPAWN 0
 #define PLAYER_COLOR 11
@@ -129,47 +129,6 @@ class Player {
 };
 
 Player player1;
-
-void cls() {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    COORD topLeft = { 0, 0 };
-
-    std::cout.flush();
-
-    if (!GetConsoleScreenBufferInfo(hOut, &csbi)) {
-        abort();
-    }
-    DWORD length = csbi.dwSize.X * csbi.dwSize.Y;
-    
-    DWORD written;
-
-    FillConsoleOutputCharacter(hOut, TEXT(' '), length, topLeft, &written);
-
-    FillConsoleOutputAttribute(hOut, csbi.wAttributes, length, topLeft, &written);
-
-    SetConsoleCursorPosition(hOut, topLeft);
-}
-
-void showConsoleCursor(bool showFlag) {
-    HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    CONSOLE_CURSOR_INFO     cursorInfo;
-
-    GetConsoleCursorInfo(out, &cursorInfo);
-    cursorInfo.bVisible = showFlag; // set the cursor visibility
-    SetConsoleCursorInfo(out, &cursorInfo);
-}
-
-void setCursorPosition(int x, int y) {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    std::cout.flush();
-    COORD coord = { (SHORT)x, (SHORT)y };
-    SetConsoleCursorPosition(hOut, coord);
-}
-
-HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
 void refresh(int x, int y) {
 	cout << ' ';
@@ -611,62 +570,11 @@ void setConsoleFontSize(int x, int y) {
 	
 }
 
-int main() {
-	char zone[r][c];
-	bool level_done = false;
-	char input;
-	bool openMap = false;
-	
-	showConsoleCursor(false);
-	ShowWindow(GetConsoleWindow(),SW_MAXIMIZE);
-	SendMessage(GetConsoleWindow(),WM_SYSKEYDOWN,VK_RETURN,0x20000000);
-	
-	setConsoleFontSize(15, 34);
-
-	generate_floor(1);
-	
-	for(int i=0; i<f_r; i++) {
-		for(int j=0; j<f_c; j++) {
-			if(map.floor[i][j].zoneType != -1)
-				cout<<' ';
-			cout<<map.floor[i][j].zoneType<<' ';
-		}
-		cout<<endl;
-	}
-	
-	getch();
-	
-	setCursorPosition(7, 7);
-	
-	generate_zone(zone, true);
-	
-	while(!level_done) {
-		showConsoleCursor(false);
-		
-		if(player1.hasMoved)
-			refresh(player1.x, player1.y);
-			
-		input = getch();
-		
-		action(zone, input);
-		
-		
-		if(player1.x == 0 && player1.y == 7) {
-			player1.f_x--;
-			player1.x = 13;
-			generate_zone(zone);
-		}else if(player1.x == 14 && player1.y == 7) {
-			player1.f_x++;
-			player1.x = 1;
-			generate_zone(zone);
-		}else if(player1.x == 7 && player1.y == 0) {
-			player1.f_y--;
-			player1.y = 13;
-			generate_zone(zone);
-		}else if(player1.x == 7 && player1.y == 14) {
-			player1.f_y++;
-			player1.y = 1;
-			generate_zone(zone);
-		}
-	}
+int main()
+{
+	Enemy Enemy;
+	Enemy.Stats(2);
+	Enemy.EnemyControl();
+	setCursorPosition(0, MaxY+1);
+	Sleep(10000);
 }

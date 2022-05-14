@@ -1,0 +1,59 @@
+int main() {
+	char zone[r][c];
+	bool level_done = false;
+	char input;
+	bool openMap = false;
+	
+	showConsoleCursor(false);
+	ShowWindow(GetConsoleWindow(),SW_MAXIMIZE);
+	SendMessage(GetConsoleWindow(),WM_SYSKEYDOWN,VK_RETURN,0x20000000);
+	
+	setConsoleFontSize(15, 34);
+
+	generate_floor(1);
+	
+	for(int i=0; i<f_r; i++) {
+		for(int j=0; j<f_c; j++) {
+			if(map.floor[i][j].zoneType != -1)
+				cout<<' ';
+			cout<<map.floor[i][j].zoneType<<' ';
+		}
+		cout<<endl;
+	}
+	
+	getch();
+	
+	setCursorPosition(7, 7);
+	
+	generate_zone(zone, true);
+	
+	while(!level_done) {
+		showConsoleCursor(false);
+		
+		if(player1.hasMoved)
+			refresh(player1.x, player1.y);
+			
+		input = getch();
+		
+		action(zone, input);
+		
+		
+		if(player1.x == 0 && player1.y == 7) {
+			player1.f_x--;
+			player1.x = 13;
+			generate_zone(zone);
+		}else if(player1.x == 14 && player1.y == 7) {
+			player1.f_x++;
+			player1.x = 1;
+			generate_zone(zone);
+		}else if(player1.x == 7 && player1.y == 0) {
+			player1.f_y--;
+			player1.y = 13;
+			generate_zone(zone);
+		}else if(player1.x == 7 && player1.y == 14) {
+			player1.f_y++;
+			player1.y = 1;
+			generate_zone(zone);
+		}
+	}
+}
