@@ -5,11 +5,13 @@
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
+#include "Enemy.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define SPAWN 0
 #define PLAYER_COLOR 11
 #define ENEMY_COLOR 4
+#define OPT_COLOR 6
 #define SHOP_COLOR 13
 #define f_r 10
 #define f_c 25
@@ -27,6 +29,12 @@
 
 using namespace std;
 
+Enemy enemy;
+
+void refresh(int x, int y);
+void display(char M[r][c]);
+
+int n;
 char UD = 179;
 char UDL = 180;
 char TUDL = 185;
@@ -52,6 +60,7 @@ char DR = 218;
 char PLAYER = '@';
 char SHOP = char(207);
 char ENEMY = 'E';
+char OPT = 'P';
 char DOOR = 'A';
 char WALL = '#';
 int lvl;
@@ -123,7 +132,11 @@ class Player {
 			}
 			
 			if(dest == ENEMY) {
-				//fight();
+				cls();
+				enemy.EnemyControl();
+				Pause();
+				display(M);
+				refresh(x, y);
 				map.floor[f_y][f_x].enemies[y][x] = 0;
 				map.floor[f_y][f_x].enemies_count--;
 				if(map.floor[f_y][f_x].enemies_count == 0) {
@@ -169,7 +182,7 @@ class Player {
 
 Player player1;
 
-void cls() {
+/*void cls() {
     static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -208,7 +221,7 @@ void setCursorPosition(int x, int y) {
     SetConsoleCursorPosition(hOut, coord);
 }
 
-HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);*/
 
 void refresh(int x, int y) {
 	cout << ' ';
@@ -227,7 +240,14 @@ void display(char M[r][c]) {
 				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
 				cout<<M[i][j]<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
-			}else
+			}else if(M[i][j] == OPT){
+				SetConsoleTextAttribute(hConsole, OPT_COLOR);
+				cout<<M[i][j]<<' ';
+				SetConsoleTextAttribute(hConsole, 15);
+			}else if(M[i][j] == '*'){
+				cout<<"  ";
+			}
+			else
 				cout<<M[i][j]<<' ';
 		}
 		cout<<endl;
@@ -304,7 +324,7 @@ void get_sample(int n, char M[r][c]) {
   	}
 }
 
-void generate_enemies(char M[r][c]) {
+void generate_enemies(char M[r][c], bool opt = false) {
 	int count = 0;
 	int i, j;
 	
@@ -319,6 +339,28 @@ void generate_enemies(char M[r][c]) {
 			M[i][j] = ENEMY;
 			map.floor[player1.f_y][player1.f_x].enemies[i][j] = 1;
 			count++;
+		}
+	}
+	
+	if(!opt){
+		for(i=0; i<r; i++){
+			for(j=0; j<c; j++){
+				if(M[i][j] == '*')
+					M[i][j] = ' ';
+			}
+		}	
+	
+		return;	
+	}
+	
+	for(i=0; i<r; i++){
+		for(j=0; j<c; j++){
+			if(M[i][j] == '*'){
+				if(rand()%(10-lvl*2) == 0){
+					map.floor[player1.f_y][player1.f_x].enemies[i][j] = 2;
+					M[i][j] = OPT;
+				}
+			}
 		}
 	}
 }
@@ -349,7 +391,7 @@ void generate_zone(char M[r][c], bool spawn = false, bool shop = false) {
  		map.floor[player1.f_y][player1.f_x].done = true;
 		 	
  	if(!spawn && !shop && !map.floor[player1.f_y][player1.f_x].done)
-		generate_enemies(M);
+		generate_enemies(M, 1);
 		
 	display(M);
 	
@@ -583,8 +625,6 @@ void konamiCode() {
 			map.floor[i][j].discovered = true;
 	}
 }
-
-int n;
 
 void action(char zone[r][c], char input) {
 	char a;

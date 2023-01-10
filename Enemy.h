@@ -201,6 +201,11 @@ class Enemy{
 			setCursorPosition(MaxX+5, MaxY-2);
 			cout<<"                                               ";
 			DisplayStats();
+			setCursorPosition(MaxX+35, 2);
+			cout<<"Here you will find ";
+			setCursorPosition(MaxX+35, 3);
+			cout<<"all the information needed to defeat the enemy";
+			Pause();
 		}
 		
 		
