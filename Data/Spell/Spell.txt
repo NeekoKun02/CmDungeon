@@ -1,6 +1,5 @@
 10000001
-Annusaculi
-150
-50
+FireBall
+100
 10000002
-NeekoPalle
+WindBlow

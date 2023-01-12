@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdlib.h>
 #include <conio.h>
 #include <Windows.h>
 #include <fstream>
@@ -9,6 +10,7 @@
 #define MaxY 15
 
 using namespace std;
+
 DWORD WINAPI SpeedThread(LPVOID lpParam);
 HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -88,13 +90,19 @@ void Pause()
 class Spell{
 	public:
 		
-		void SpellDisplay(string code1)//, string code2, string code3, string code4
+		struct spell{
+			string name;
+			int dmg;
+		};
+		
+		spell spells[5];
+		
+		void SpellDisplay(string* code)//, string code2, string code3, string code4
 			{
-				string names[4];
 				setCursorPosition(0, MaxY-5);
-				for(int i=0; i<5; i++){
+				for(int i=0; i<8; i++){
 					for(int j=0; j<MaxX/2; j++){
-						if(i==0||i==4||j==0||j==MaxX/2-1)
+						if(i==0||i==7||j==0||j==MaxX/2-1)
 							cout<<"# ";
 						else 
 							cout<<"  ";
@@ -102,24 +110,33 @@ class Spell{
 					cout<<endl;	
 				}
 				setCursorPosition(2, MaxY-4);
-				names[0]=SpellNameSearch(code1);
-				cout<<"1."<<names[0];
-				Pause();
+				for(int i=0; i<5; i++)
+				{
+					try{
+						setCursorPosition(2, MaxY-4+i);
+						SpellNameSearch(code[i], i);
+						cout<<i+1<<". "<<spells[i].name<<"      "<<spells[i].dmg;
+					}catch(...){}
+					
+				}
 			}
 			
-		string SpellNameSearch(string code)
+		void SpellNameSearch(string code, int num)
 		{
 			string name;
+			char dmg[10];
 			ifstream Spell("Data/Spell/Spell.txt");
 			while(getline(Spell, name))
 			{
 				if(name==code)
 				{
-				getline(Spell, name);
-				return name;	
+					getline(Spell, spells[num].name);
+					Spell.getline(dmg, 10);
+					spells[num].dmg = atoi(dmg);
+					return;
 				}
 			}
-			return 0;
+			return;
 		}
 };
 
@@ -128,12 +145,13 @@ class Enemy{
 	Spell Spell;
 	public:
 		
-			struct{
-			int life=200;
-			int armor=20;
-			int dmg=120;
-		}BaseEnemy;
-		
+		struct baseEnemy{
+			int life=100;
+			int armor=30;
+			int dmg=10;
+		};
+		baseEnemy BaseEnemy;
+		baseEnemy NewEnemy;
 		
 		void DisplayEnemy(int n)
 		{
@@ -144,8 +162,14 @@ class Enemy{
 			string line;
 			
 			switch (n){
+				
 				case 1:
 					Enemy.open("Data/Enemy/boh.txt");
+					break;
+					
+				case 0:
+					Enemy.open("Data/Enemy/bohh.txt");
+					break;
 			}
 			while ( getline (Enemy,line) )
 			{
@@ -156,31 +180,34 @@ class Enemy{
 		}
 		
   			
-		void Stats(int lvl)
+		void Stats(float lvl)
 		{
-			BaseEnemy.life*=lvl;
-			BaseEnemy.armor*=lvl;
-			BaseEnemy.dmg*=lvl;
+			NewEnemy.life = BaseEnemy.life*lvl;
+			NewEnemy.armor=BaseEnemy.armor*lvl;
+			NewEnemy.dmg=BaseEnemy.dmg*lvl;
 		}
 		
-		void DisplayStats()
+		void DisplayStats(string* codes)
 		{
+			setCursorPosition(MaxX+5, (MaxY-5)/2);
+			cout<<"                  ";
+			Spell.SpellDisplay(codes);
 			setCursorPosition(MaxX+4, 1 );
 			cout<<"Enemy:";
 			
 			setCursorPosition(MaxX+4, 2);
-			cout<<"\tLife\t"<<BaseEnemy.life;
+			cout<<"\tLife\t"<<NewEnemy.life;
 			
 			setCursorPosition(MaxX+4, 3);
-			cout<<"\tArmor\t"<<BaseEnemy.armor;
+			cout<<"\tArmor\t"<<NewEnemy.armor;
 			
 			setCursorPosition(MaxX+4, 4);
-			cout<<"\tAttack Damage\t"<<BaseEnemy.dmg;
+			cout<<"\tAttack Damage\t"<<NewEnemy.dmg;
 			
 		}
 		
 		
-		void Tutorial()
+		void Tutorial(string* codes)
 		{
 			cls();
 			DisplayEnemy(1);
@@ -190,7 +217,7 @@ class Enemy{
 			Pause();
 			setCursorPosition(MaxX+5, (MaxY-5)/2);
 			cout<<"                  ";
-			Spell.SpellDisplay("10000002");
+			DisplayStats(codes);
 			setCursorPosition(MaxX+5, MaxY-3);
 			cout<<"These are the spell you can use,";
 			setCursorPosition(MaxX+5, MaxY-2);
@@ -200,11 +227,15 @@ class Enemy{
 			cout<<"                                ";
 			setCursorPosition(MaxX+5, MaxY-2);
 			cout<<"                                               ";
-			DisplayStats();
+			setCursorPosition(MaxX+35, 2);
+			cout<<"Here you will find ";
+			setCursorPosition(MaxX+35, 3);
+			cout<<"all the information needed to defeat the enemy";
+			Pause();
 		}
 		
 		
-		void EnemyControl()
+		void EnemyControl(string* codes)
 		{
 			char num;
 			string line;
@@ -228,12 +259,16 @@ class Enemy{
 				File << 1;
 				File.close();
 				MessageBox1(1, "", 7);
-				Tutorial();
+				Tutorial(codes);
 			}
-			
+
 		}
-		
-		
+
+		void Fight()
+		{
+			Pause();
+			return;
+		}		
 };
 
 

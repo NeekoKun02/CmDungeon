@@ -1,32 +1,49 @@
 #include <windows.h>	// Hey! I don't like doin' it flashy....
+#include <Windows.h>
+#include <Wincon.h>
+#include <winbase.h>
 #include <iomanip>		// Boh
 #include <ctime>		// Random Level/Floors/Zones generation
 #include <conio.h>		// Get keypress char data without waiting for newline command
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
+#include "enemy.h"
 
 #define WIN32_LEAN_AND_MEAN
-#define SPAWN 0
+#define SPAWN_TYPE 0
+#define BOSS_TYPE 1
+#define SHOP_TYPE 2
+
+#define BOSS_COLOR 13
 #define PLAYER_COLOR 11
 #define ENEMY_COLOR 4
 #define OPT_COLOR 6
 #define SHOP_COLOR 13
+#define DOOR_COLOR 7
+
 #define f_r 10
 #define f_c 25
 #define r 15
 #define c 15
 #define x_d 5
 #define y_d 3
-#define zones 10
+#define zones 14
 #define KEY_UP 72
 #define KEY_DOWN 80
 #define KEY_LEFT 75
 #define KEY_RIGHT 77
 #define ESC_KEY 27
-#define MAX_LVL 4
+#define MAX_LVL 2
 
 using namespace std;
+
+Enemy enemy;
+int NumSpell = 1;
+string codes[5] = {"10000001", "0", "0", "0", "0"};
+
+void refresh(int x, int y);
+void display(char M[r][c]);
 
 int n;
 char UD = 179;
@@ -60,6 +77,7 @@ char WALL = '#';
 int lvl;
 
 void setCursorPosition(int, int);
+void refresh(int x, int y);
 
 struct myZone {
 	bool done;
@@ -126,7 +144,18 @@ class Player {
 			}
 			
 			if(dest == ENEMY) {
-				//fight();
+				cls();
+				enemy.EnemyControl(codes);
+				enemy.DisplayEnemy(0);
+				enemy.Stats(0.5);
+				enemy.DisplayStats(codes);
+				for(int i=0; i++; i<5)
+				{
+					cout<<codes[i];
+				}
+				enemy.Fight();
+				display(M);
+				refresh(x, y);
 				map.floor[f_y][f_x].enemies[y][x] = 0;
 				map.floor[f_y][f_x].enemies_count--;
 				if(map.floor[f_y][f_x].enemies_count == 0) {
@@ -167,51 +196,11 @@ class Player {
 			}
 			
 			hasMoved = true;
+			return ' ';
 		}
 };
 
 Player player1;
-
-void cls() {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    COORD topLeft = { 0, 0 };
-
-    std::cout.flush();
-
-    if (!GetConsoleScreenBufferInfo(hOut, &csbi)) {
-        abort();
-    }
-    DWORD length = csbi.dwSize.X * csbi.dwSize.Y;
-    
-    DWORD written;
-
-    FillConsoleOutputCharacter(hOut, TEXT(' '), length, topLeft, &written);
-
-    FillConsoleOutputAttribute(hOut, csbi.wAttributes, length, topLeft, &written);
-
-    SetConsoleCursorPosition(hOut, topLeft);
-}
-
-void showConsoleCursor(bool showFlag) {
-    HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    CONSOLE_CURSOR_INFO     cursorInfo;
-
-    GetConsoleCursorInfo(out, &cursorInfo);
-    cursorInfo.bVisible = showFlag; // set the cursor visibility
-    SetConsoleCursorInfo(out, &cursorInfo);
-}
-
-void setCursorPosition(int x, int y) {
-    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    std::cout.flush();
-    COORD coord = { (SHORT)x, (SHORT)y };
-    SetConsoleCursorPosition(hOut, coord);
-}
-
-HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
 void refresh(int x, int y) {
 	cout << ' ';
@@ -234,11 +223,15 @@ void display(char M[r][c]) {
 				SetConsoleTextAttribute(hConsole, OPT_COLOR);
 				cout<<M[i][j]<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
+			}else if(M[i][j] == DOOR){
+				SetConsoleTextAttribute(hConsole, DOOR_COLOR);
+				cout<<M[i][j]<<' ';
+				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == '*'){
 				cout<<"  ";
-			}
-			else
+			}else{
 				cout<<M[i][j]<<' ';
+			}
 		}
 		cout<<endl;
 	}	
@@ -260,11 +253,11 @@ void get_sample(int n, char M[r][c]) {
 			break;
 		}
 		case 1: {
-			myFile.open("data/zone_01.txt");
+			myFile.open("data/boss.txt");
 			break;
 		}
 		case 2:  {
-			myFile.open("data/zone_02.txt");
+			myFile.open("data/shop.txt");
 			break;
 		}
 		case 3: {
@@ -299,6 +292,30 @@ void get_sample(int n, char M[r][c]) {
 			myFile.open("data/zone_10.txt");
 			break;
 		}
+		case 11: {
+			myFile.open("data/zone_11.txt");
+			break;
+		}
+		case 12: {
+			myFile.open("data/zone_12.txt");
+			break;
+		}
+		case 13: {
+			myFile.open("data/zone_13.txt");
+			break;
+		}
+		case 14: {
+			myFile.open("data/zone_14.txt");
+			break;
+		}
+		case 15: {
+			myFile.open("data/zone_15.txt");
+			break;
+		}
+		case 16: {
+			myFile.open("data/zone_16.txt");
+			break;
+		}
 	}
 	
 	for(int i=0; i<r; i++) {
@@ -314,14 +331,14 @@ void get_sample(int n, char M[r][c]) {
   	}
 }
 
-void generate_enemies(char M[r][c], bool opt = false) {
+void generate_enemies(char M[r][c], bool opt = false, bool boss = false) {
 	int count = 0;
 	int i, j;
 	
 	srand(time(NULL));
 	map.floor[player1.f_y][player1.f_x].enemies_count = rand()%2+lvl+2;
 	
-	while(count < map.floor[player1.f_y][player1.f_x].enemies_count){
+	while((count < map.floor[player1.f_y][player1.f_x].enemies_count) && !boss){
 		i = rand()%16;
 		j = rand()%16;
 		
@@ -342,6 +359,17 @@ void generate_enemies(char M[r][c], bool opt = false) {
 	
 		return;	
 	}
+
+	if(boss){
+		for(i=0; i<r; i++){
+			for(j=0; j<c; j++){
+				if(M[i][j] == 'X')
+					M[i][j] = 'X';
+			}
+		}	
+	
+		return;	
+	}
 	
 	for(i=0; i<r; i++){
 		for(j=0; j<c; j++){
@@ -355,7 +383,7 @@ void generate_enemies(char M[r][c], bool opt = false) {
 	}
 }
 
-void generate_zone(char M[r][c], bool spawn = false, bool shop = false) {
+void generate_zone(char M[r][c], bool spawn = false, bool shop = false, bool boss = false) {
 	int a;
 	int type = map.floor[player1.f_y][player1.f_x].zoneType;
 	int enemies = 0;
@@ -380,7 +408,7 @@ void generate_zone(char M[r][c], bool spawn = false, bool shop = false) {
  	if(spawn || shop)
  		map.floor[player1.f_y][player1.f_x].done = true;
 		 	
- 	if(!spawn && !shop && !map.floor[player1.f_y][player1.f_x].done)
+ 	if(!spawn && !shop && !boss && !map.floor[player1.f_y][player1.f_x].done)
 		generate_enemies(M, 1);
 		
 	display(M);
@@ -394,7 +422,7 @@ void generate_floor(int level) {
 	int fixed_rooms = 0;
 	int a, b;
 	bool acceptable = true;
-	myZone queue[rooms];
+	myZone queue[100];
 	
 	a = rand()%5+f_r/2-2;
 	b = rand()%8+f_c/2-2;
@@ -409,7 +437,7 @@ void generate_floor(int level) {
 			map.floor[i][j].zoneType = -1;			// Sets all possible zone positions as empty
 	}
 	
-	map.floor[a][b].zoneType = SPAWN;					// Sets spawn room
+	map.floor[a][b].zoneType = SPAWN_TYPE;					// Sets spawn_TYPE room
 	queue[0] = map.floor[a][b];
 	queue[0].x = a;
 	queue[0].y = b;
@@ -438,7 +466,7 @@ void generate_floor(int level) {
 			// This mf of an if statement works to check if the cell is occupied, has more than 1 neightbour or a random 50% chance to know if it can become a room
 			if(x != 0 && x != f_r-1 && y != 0 && y != f_c-1 && map.floor[x][y].zoneType == -1 && ((map.floor[x+1][y].zoneType != -1) + (map.floor[x-1][y].zoneType != -1) + (map.floor[x][y+1].zoneType != -1) + (map.floor[x][y-1].zoneType != -1) + (map.floor[x-1][y-1].zoneType != -1) + (map.floor[x+1][y-1].zoneType != -1) + (map.floor[x-1][y+1].zoneType != -1) + (map.floor[x+1][y+1].zoneType != -1)) < 4 && rand()%2) {
 				do{
-					map.floor[x][y].zoneType = rand()%zones+1;
+					map.floor[x][y].zoneType = rand()%zones+3;
 				} while(map.floor[x][y].zoneType == queue[i].zoneType);
 			
 				queue[fixed_rooms] = map.floor[x][y];
@@ -449,6 +477,16 @@ void generate_floor(int level) {
 			}
 		}
 	}
+
+	for(int i=0; i<rooms; i++){
+		myZone here = queue[i];
+
+		if(((map.floor[here.x+1][here.y].zoneType == -1) + (map.floor[here.x][here.y-1].zoneType == -1) + (map.floor[here.x-1][here.y].zoneType == -1) + (map.floor[here.x][here.y+1].zoneType == -1)) == 3){
+			map.floor[here.x][here.y].zoneType = BOSS_TYPE;
+			i = rooms;
+		}
+	}
+
 }
 
 void generateMap(char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
@@ -537,6 +575,8 @@ void generateMap(char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = PLAYER;
 				else if(map.floor[i][j].zoneType == 0)
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 245;
+				else if(map.floor[i][j].zoneType == BOSS_TYPE && map.floor[i][j].discovered)
+					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 'X';
 				else
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 126;
 			}
@@ -593,6 +633,12 @@ void showMap() {
 				cout<<'~';
 				SetConsoleTextAttribute(hConsole, 15);
 			}
+			else if(miniMap[i][j] == 'X'){
+				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
+				cout<<'X';
+				SetConsoleTextAttribute(hConsole, 15);
+			}
+
 				// If a character:
 			else{
 				if(map.floor[(i-y_d-1)/2][(j-x_d-2)/4].discovered)
@@ -705,19 +751,6 @@ void action(char zone[r][c], char input) {
 		konamiCode();
 }
 
-void setConsoleFontSize(int x, int y) {
-	CONSOLE_FONT_INFOEX cfi;
-	cfi.cbSize = sizeof(cfi);
-	cfi.nFont = 0;
-	cfi.dwFontSize.X = x;                   // Width of each character in the font
-	cfi.dwFontSize.Y = y;                  // Height
-	cfi.FontFamily = FF_DONTCARE;
-	cfi.FontWeight = FW_NORMAL;
-	std::wcscpy(cfi.FaceName, L"Consolas"); // Choose your font
-	SetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &cfi);
-	
-}
-
 int main() {
 	char zone[r][c];
 	char input;
@@ -727,8 +760,6 @@ int main() {
 	showConsoleCursor(false);
 	ShowWindow(GetConsoleWindow(),SW_MAXIMIZE);
 	SendMessage(GetConsoleWindow(),WM_SYSKEYDOWN,VK_RETURN,0x20000000);
-	
-	setConsoleFontSize(15, 34);
 	
 	for(int i=1; i<MAX_LVL; i++) {
 		lvl = i;
@@ -748,26 +779,27 @@ int main() {
 			
 			action(zone, input);
 			
-			if(map.floor[player1.f_y][player1.f_x].enemies_count == 0 && map.floor[player1.f_y][player1.f_x].zoneType != SPAWN && !map.floor[player1.f_y][player1.f_x].done)
+			if(map.floor[player1.f_y][player1.f_x].enemies_count == 0 && map.floor[player1.f_y][player1.f_x].zoneType != SPAWN_TYPE && !map.floor[player1.f_y][player1.f_x].done)
 				map.floor[player1.f_y][player1.f_x].done == true;
 		
-			if(player1.x == 0 && player1.y == 7) {
+			if(player1.x <= 0 && player1.y == 7) {
 				player1.f_x--;
 				player1.x = 13;
 				generate_zone(zone);
-			}else if(player1.x == 14 && player1.y == 7) {
+			}else if(player1.x >= 14 && player1.y == 7) {
 				player1.f_x++;
 				player1.x = 1;
 				generate_zone(zone);
-			}else if(player1.x == 7 && player1.y == 0) {
+			}else if(player1.x == 7 && player1.y <= 0) {
 				player1.f_y--;
 				player1.y = 13;
 				generate_zone(zone);
-			}else if(player1.x == 7 && player1.y == 14) {
+			}else if(player1.x == 7 && player1.y >= 14) {
 				player1.f_y++;
 				player1.y = 1;
 				generate_zone(zone);
 			}
 		}
 	}
+
 }
