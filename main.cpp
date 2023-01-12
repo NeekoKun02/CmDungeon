@@ -42,7 +42,6 @@ Enemy enemy;
 int NumSpell = 1;
 string codes[5] = {"10000001", "0", "0", "0", "0"};
 
-void refresh(int x, int y);
 void display(char M[r][c]);
 
 int n;
@@ -69,15 +68,14 @@ char TUDLR = 206;
 char UL = 217;
 char DR = 218;
 char PLAYER = '@';
-char SHOP = char(207);
 char ENEMY = 'E';
 char OPT = 'P';
+char SHOP = char(207);
 char DOOR = 'A';
 char WALL = '#';
 int lvl;
 
 void setCursorPosition(int, int);
-void refresh(int x, int y);
 
 struct myZone {
 	bool done;
@@ -110,11 +108,25 @@ class Player {
 		bool fought;
 		int x;
 		int y;
-		int f_y;
 		int f_x;
+		int f_y;
+		int l_x = 0;
+		int l_y = 0;
+
+		void refresh() {
+			setCursorPosition(l_x*2, l_y);
+			cout << ' ';
+			setCursorPosition(x*2, y);
+			SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
+			cout << PLAYER;
+			SetConsoleTextAttribute(hConsole, 15);
+		}
 		
 		char move(char M[r][c], int dir) {
 			char dest;
+
+			l_x = x;
+			l_y = y;
 			
 			switch(dir) {
 				case 1:{
@@ -155,7 +167,7 @@ class Player {
 				}
 				enemy.Fight();
 				display(M);
-				refresh(x, y);
+				refresh();
 				map.floor[f_y][f_x].enemies[y][x] = 0;
 				map.floor[f_y][f_x].enemies_count--;
 				if(map.floor[f_y][f_x].enemies_count == 0) {
@@ -202,15 +214,6 @@ class Player {
 
 Player player1;
 
-void refresh(int x, int y) {
-	cout << ' ';
-	setCursorPosition(x*2, y);
-	SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
-	cout << PLAYER;
-	SetConsoleTextAttribute(hConsole, 15);	
-	setCursorPosition(x*2, y);
-}
-
 void display(char M[r][c]) {
 	system("CLS");
 	for(int i=0; i<r; i++) {
@@ -235,8 +238,9 @@ void display(char M[r][c]) {
 		}
 		cout<<endl;
 	}	
+
 	player1.hasMoved = true;
-	refresh(player1.x, player1.y);
+	player1.refresh();
 	setCursorPosition(player1.x, player1.y);
 }
 
@@ -773,7 +777,7 @@ int main() {
 			showConsoleCursor(false);
 			
 			if(player1.hasMoved)
-				refresh(player1.x, player1.y);
+				player1.refresh();
 			
 			input = getch();
 			
