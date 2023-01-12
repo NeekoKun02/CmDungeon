@@ -161,10 +161,6 @@ class Player {
 				enemy.DisplayEnemy(0);
 				enemy.Stats(0.5);
 				enemy.DisplayStats(codes);
-				for(int i=0; i++; i<5)
-				{
-					cout<<codes[i];
-				}
 				enemy.Fight();
 				display(M);
 				refresh();
