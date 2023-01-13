@@ -8,6 +8,7 @@
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
+#include <cmath>
 #include "enemy.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -40,8 +41,7 @@ using namespace std;
 
 Enemy enemy;
 int NumSpell = 1;
-string codes[5] = {"10000001", "0", "0", "0", "0"};
-
+string codes[5] = {"10000001", "10000001", "0", "0", "0"};
 void display(char M[r][c]);
 
 int n;
@@ -99,6 +99,9 @@ myFloor map;
 bool interactable;
 
 void shutdown() {
+	ofstream File ("Data/Enemy/Tut.txt");
+	File << 0;
+	File.close();
 	exit(0);
 }
 
@@ -112,6 +115,26 @@ class Player {
 		int f_y;
 		int l_x = 0;
 		int l_y = 0;
+		int LvL;
+		int MaxHealth = 100;
+		int Health;
+		int Exp;
+		int *health = &Health;
+
+		void lvlup()
+		{
+			LvL++;
+			Health = MaxHealth*LvL;
+		}
+		
+		void refreshSpell()
+		{
+			for(int i=0; i<5; i++)
+			{
+				enemy.codes[i]=codes[i];
+			}
+			
+		}
 
 		void refresh() {
 			setCursorPosition(l_x*2, l_y);
@@ -120,6 +143,12 @@ class Player {
 			SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
 			cout << PLAYER;
 			SetConsoleTextAttribute(hConsole, 15);
+		}
+		
+		int get_spawn_distance() {
+    	float distance;
+    	distance = sqrt((f_x-f_r/2)*(f_x-f_r/2) + (f_y-f_c/2)*(f_y-f_c/2));
+    	return (int)distance/10;
 		}
 		
 		char move(char M[r][c], int dir) {
@@ -157,15 +186,18 @@ class Player {
 			
 			if(dest == ENEMY) {
 				cls();
-				enemy.EnemyControl(codes);
-				enemy.DisplayEnemy(0);
-				enemy.Stats(0.5);
-				enemy.DisplayStats(codes);
-				for(int i=0; i++; i<5)
+				int lvlvl = get_spawn_distance();
+				Pause();
+				if(enemy.EnemyControl(*health))
 				{
-					cout<<codes[i];
+					enemy.DisplayEnemy(0);
+					enemy.Stats(lvlvl);
+					enemy.DisplayStats(Health);
+					enemy.Fight(*health);
+					enemy.Rewards(lvl);
 				}
-				enemy.Fight();
+				if(Exp == 100*LvL)
+					lvlup();
 				display(M);
 				refresh();
 				map.floor[f_y][f_x].enemies[y][x] = 0;
@@ -243,6 +275,9 @@ void display(char M[r][c]) {
 	player1.refresh();
 	setCursorPosition(player1.x, player1.y);
 }
+
+
+
 
 void get_sample(int n, char M[r][c]) {
 	ifstream myFile;
@@ -756,6 +791,9 @@ void action(char zone[r][c], char input) {
 }
 
 int main() {
+	player1.LvL = 0;
+	player1.lvlup();
+	player1.refreshSpell();
 	char zone[r][c];
 	char input;
 	bool level_done = false;
