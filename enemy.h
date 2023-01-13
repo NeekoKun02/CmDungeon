@@ -144,16 +144,14 @@ class Spell{
 		
 		int Use(int armor, int nspell)
 		{
-			return 50;
+			return (spells[nspell].dmg/10)*(10-(armor/10));
 		}
 };
 
 
 class Enemy{
-	Spell Spell;
-	
 	public:
-		
+		Spell spell;
 		struct baseEnemy{
 			int life=100;
 			int armor=10;
@@ -200,7 +198,7 @@ class Enemy{
 		{
 			setCursorPosition(MaxX+5, (MaxY-5)/2);
 			cout<<"                  ";
-			Spell.SpellDisplay(codes, PlayerHealth);
+			spell.SpellDisplay(codes, PlayerHealth);
 			setCursorPosition(MaxX+4, 1 );
 			cout<<"Enemy:";
 			
@@ -234,7 +232,7 @@ class Enemy{
 				char input = getch();
 				if(input=='1' || input=='2' || input=='3' || input=='4' || input=='5')
 				{
-					NewEnemy.life-=Spell.Use(NewEnemy.armor,input);
+					NewEnemy.life-=spell.Use(NewEnemy.armor, input-49);
 					if(NewEnemy.life<=0)
 						return;
 					PlayerHealth-=NewEnemy.dmg;

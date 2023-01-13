@@ -8,21 +8,18 @@
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
-#include <cmath>
 #include "enemy.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define SPAWN_TYPE 0
 #define BOSS_TYPE 1
 #define SHOP_TYPE 2
-
 #define BOSS_COLOR 13
 #define PLAYER_COLOR 11
 #define ENEMY_COLOR 4
 #define OPT_COLOR 6
 #define SHOP_COLOR 13
 #define DOOR_COLOR 7
-
 #define f_r 10
 #define f_c 25
 #define r 15
@@ -41,7 +38,9 @@ using namespace std;
 
 Enemy enemy;
 int NumSpell = 1;
-string codes[5] = {"10000001", "10000001", "0", "0", "0"};
+string codes[5] = {"10000001", "0", "0", "0", "0"};
+
+void refresh(int x, int y);
 void display(char M[r][c]);
 
 int n;
@@ -68,14 +67,15 @@ char TUDLR = 206;
 char UL = 217;
 char DR = 218;
 char PLAYER = '@';
+char SHOP = char(207);
 char ENEMY = 'E';
 char OPT = 'P';
-char SHOP = char(207);
 char DOOR = 'A';
 char WALL = '#';
 int lvl;
 
 void setCursorPosition(int, int);
+void refresh(int x, int y);
 
 struct myZone {
 	bool done;
@@ -99,9 +99,6 @@ myFloor map;
 bool interactable;
 
 void shutdown() {
-	ofstream File ("Data/Enemy/Tut.txt");
-	File << 0;
-	File.close();
 	exit(0);
 }
 
@@ -111,51 +108,11 @@ class Player {
 		bool fought;
 		int x;
 		int y;
-		int f_x;
 		int f_y;
-		int l_x = 0;
-		int l_y = 0;
-		int LvL;
-		int MaxHealth = 100;
-		int Health;
-		int Exp;
-		int *health = &Health;
-
-		void lvlup()
-		{
-			LvL++;
-			Health = MaxHealth*LvL;
-		}
-		
-		void refreshSpell()
-		{
-			for(int i=0; i<5; i++)
-			{
-				enemy.codes[i]=codes[i];
-			}
-			
-		}
-
-		void refresh() {
-			setCursorPosition(l_x*2, l_y);
-			cout << ' ';
-			setCursorPosition(x*2, y);
-			SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
-			cout << PLAYER;
-			SetConsoleTextAttribute(hConsole, 15);
-		}
-		
-		int get_spawn_distance() {
-    	float distance;
-    	distance = sqrt((f_x-f_r/2)*(f_x-f_r/2) + (f_y-f_c/2)*(f_y-f_c/2));
-    	return (int)distance/10;
-		}
+		int f_x;
 		
 		char move(char M[r][c], int dir) {
 			char dest;
-
-			l_x = x;
-			l_y = y;
 			
 			switch(dir) {
 				case 1:{
@@ -186,20 +143,17 @@ class Player {
 			
 			if(dest == ENEMY) {
 				cls();
-				int lvlvl = get_spawn_distance();
-				Pause();
-				if(enemy.EnemyControl(*health))
+				enemy.EnemyControl(codes);
+				enemy.DisplayEnemy(0);
+				enemy.Stats(0.5);
+				enemy.DisplayStats(codes);
+				for(int i=0; i++; i<5)
 				{
-					enemy.DisplayEnemy(0);
-					enemy.Stats(lvlvl);
-					enemy.DisplayStats(Health);
-					enemy.Fight(*health);
-					enemy.Rewards(lvl);
+					cout<<codes[i];
 				}
-				if(Exp == 100*LvL)
-					lvlup();
+				enemy.Fight();
 				display(M);
-				refresh();
+				refresh(x, y);
 				map.floor[f_y][f_x].enemies[y][x] = 0;
 				map.floor[f_y][f_x].enemies_count--;
 				if(map.floor[f_y][f_x].enemies_count == 0) {
@@ -246,6 +200,15 @@ class Player {
 
 Player player1;
 
+void refresh(int x, int y) {
+	cout << ' ';
+	setCursorPosition(x*2, y);
+	SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
+	cout << PLAYER;
+	SetConsoleTextAttribute(hConsole, 15);	
+	setCursorPosition(x*2, y);
+}
+
 void display(char M[r][c]) {
 	system("CLS");
 	for(int i=0; i<r; i++) {
@@ -258,26 +221,18 @@ void display(char M[r][c]) {
 				SetConsoleTextAttribute(hConsole, OPT_COLOR);
 				cout<<M[i][j]<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
-			}else if(M[i][j] == DOOR){
-				SetConsoleTextAttribute(hConsole, DOOR_COLOR);
-				cout<<M[i][j]<<' ';
-				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == '*'){
 				cout<<"  ";
-			}else{
-				cout<<M[i][j]<<' ';
 			}
+			else
+				cout<<M[i][j]<<' ';
 		}
 		cout<<endl;
 	}	
-
 	player1.hasMoved = true;
-	player1.refresh();
+	refresh(player1.x, player1.y);
 	setCursorPosition(player1.x, player1.y);
 }
-
-
-
 
 void get_sample(int n, char M[r][c]) {
 	ifstream myFile;
@@ -614,7 +569,7 @@ void generateMap(char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = PLAYER;
 				else if(map.floor[i][j].zoneType == 0)
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 245;
-				else if(map.floor[i][j].zoneType == BOSS_TYPE && map.floor[i][j].discovered)
+				else if(map.floor[i][j].zoneType == BOSS_TYPE)
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 'X';
 				else
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 126;
@@ -791,9 +746,6 @@ void action(char zone[r][c], char input) {
 }
 
 int main() {
-	player1.LvL = 0;
-	player1.lvlup();
-	player1.refreshSpell();
 	char zone[r][c];
 	char input;
 	bool level_done = false;
@@ -815,7 +767,7 @@ int main() {
 			showConsoleCursor(false);
 			
 			if(player1.hasMoved)
-				player1.refresh();
+				refresh(player1.x, player1.y);
 			
 			input = getch();
 			
