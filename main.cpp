@@ -5,7 +5,10 @@
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
-#include <cmath>
+#include <cmath>		// Required for computing SQRTs
+#include <fcntl.h>
+#include <io.h>
+#include <string>
 #include "enemy.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -15,6 +18,8 @@
 #define SHOP_TYPE 2
 #define ENEMY_TYPE 3
 #define OPT_TYPE 4
+#define WALL_TYPE 5
+#define DOOR_TYPE 6
 
 #define MAX_BOSSES 2
 #define MAX_SHOPS 2
@@ -31,9 +36,11 @@
 #define f_c 25
 #define r 15
 #define c 15
-#define x_d 5
+#define x_d 5			//frame x and y buffer
 #define y_d 3
-#define zones 20
+#define x_ds 12			//shop x and y offset
+#define y_ds 3
+#define zones 18 
 #define KEY_UP 72
 #define KEY_DOWN 80
 #define KEY_LEFT 75
@@ -108,10 +115,55 @@ void shutdown() {
 	exit(0);
 }
 
+void drawShop(bool erase = false) {
+	setCursorPosition(c*2+x_ds, y_ds);
+	if(erase) {
+		wcout<<' ';
+		for(int i=0; i<30; i++)
+			wcout<<' ';
+		wcout<<' ';
+		for(int i=0; i<7; i++){
+			setCursorPosition(c*2+x_ds, y_ds+i+1);
+			wcout<<' ';
+			for(int j=0; j<30; j++){
+				wcout<<' ';
+			}
+			wcout<<' ';
+		}
+		setCursorPosition(c*2+x_ds, y_ds+8);
+		wcout<<' ';
+		for(int i=0; i<30; i++)
+			wcout<<' ';
+		wcout<<' ';
+
+		return;
+	}
+
+	wcout<<TDR;
+	for(int i=0; i<30; i++)
+		wcout<<TLR;
+	wcout<<TDL;
+	for(int i=0; i<7; i++){
+		setCursorPosition(c*2+x_ds, y_ds+i+1);
+		wcout<<TUD;
+		for(int j=0; j<30; j++){
+			wcout<<' ';
+		}
+		wcout<<TUD;
+	}
+	setCursorPosition(c*2+x_ds, y_ds+8);
+	wcout<<TUR;
+	for(int i=0; i<30; i++)
+		wcout<<TLR;
+	wcout<<TUL;
+
+	return;
+}
+
 class Player {
 	public:
 		bool hasMoved;
-		bool fought;
+		bool shopping = false;
 		int x;
 		int y;
 		int f_x;
@@ -124,29 +176,27 @@ class Player {
 			if(map.floor[f_y][f_x].npc_map[l_y][l_x] == SHOP_TYPE) {
 				SetConsoleTextAttribute(hConsole, SHOP_COLOR);
 				setCursorPosition(l_x*2, l_y);
-				cout << SHOP;
+				wcout << SHOP;
 			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == BOSS_TYPE) {
 				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
 				setCursorPosition(l_x*2, l_y);
-				cout << BOSS;;
+				wcout << BOSS;;
 			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == ENEMY_TYPE) {
 				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
 				setCursorPosition(l_x*2, l_y);
-				cout << ENEMY;
+				wcout << ENEMY;
 			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == OPT_TYPE) {
 				SetConsoleTextAttribute(hConsole, OPT_COLOR);
 				setCursorPosition(l_x*2, l_y);
-				cout << OPT;
+				wcout << OPT;
 			}else{
 				setCursorPosition(l_x*2, l_y);
- 				cout << M[l_y][l_x];
+ 				wcout << ' ';
 			}
 
-			setCursorPosition(40, 7);
-			cout << map.floor[f_y][f_x].npc_map[l_y][l_x];
 			setCursorPosition(x*2, y);
 			SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
-			cout << PLAYER;
+			wcout << PLAYER;
 			SetConsoleTextAttribute(hConsole, 15);
 		}
 		
@@ -158,68 +208,63 @@ class Player {
 			
 			switch(dir) {
 				case 1:{
-					dest = M[y-1][x];
+					dest = map.floor[f_y][f_x].npc_map[y-1][x];
 					break;
 				}
 				case 2:{
-					dest = M[y][x-1];
+					dest = map.floor[f_y][f_x].npc_map[y][x-1];
 					break;
 				}
 				case 3: {
-					dest = M[y+1][x];
+					dest = map.floor[f_y][f_x].npc_map[y+1][x];
 					break;
 				}
 				case 4:{
-					dest = M[y][x+1];
+					dest = map.floor[f_y][f_x].npc_map[y][x+1];
 					break;
 				}
 			}
 			
-			if(dest == WALL)
+			if(dest == WALL_TYPE)
 				return WALL;
 			
-			if(dest == DOOR && !map.floor[f_y][f_x].done){
+			if(dest == DOOR_TYPE && !map.floor[f_y][f_x].done){
 				setCursorPosition(c, r+3);
 				if(map.floor[f_y][f_x].enemies_count == 1)
-					cout<<"You cannot exit until you have defeated all the enemies. "<<map.floor[f_y][f_x].enemies_count<<" enemy remaning";
+					wcout<<"You cannot exit until you have defeated all the enemies. "<<map.floor[f_y][f_x].enemies_count<<" enemy remaning";
 				else
-					cout<<"You cannot exit until you have defeated all the enemies. "<<map.floor[f_y][f_x].enemies_count<<" enemies remaning";
+					wcout<<"You cannot exit until you have defeated all the enemies. "<<map.floor[f_y][f_x].enemies_count<<" enemies remaning";
 				setCursorPosition(x*2, y);
 				return 'A';	
 			}
-			
+
 			switch(dir) {
 				case 1:{
 					y--;
-					if(fought)
-						M[y][x] = ' ';
 					break;
-					fought = false;
 				}
 				case 2:{
 					x--;
-					if(fought)
-						M[y][x] = ' ';
 					break;
-					fought = false;
 				}
 				case 3: {
 					y++;
-					if(fought)
-						M[y][x] = ' ';
 					break;
-					fought = false;
 				}
 				case 4:{
 					x++;
-					if(fought)
-						M[y][x] = ' ';
 					break;
-					fought = false;
 				}
 			}
+
+			if(dest == SHOP_TYPE) {
+				drawShop();
+				shopping = true;
+			}else if(shopping){
+				drawShop(true);
+			}
 			
-			if(dest == ENEMY) {
+			if(dest == ENEMY_TYPE) {
 				cls();
 				enemy.EnemyControl(codes);
 				enemy.DisplayEnemy(0);
@@ -229,6 +274,7 @@ class Player {
 				display(M);
 				refresh(M);
 
+				M[y][x] = ' ';
 				map.floor[f_y][f_x].npc_map[y][x] = 0;
 				map.floor[f_y][f_x].enemies_count--;
 
@@ -236,8 +282,6 @@ class Player {
 				if(map.floor[f_y][f_x].enemies_count == 0) {
 					map.floor[f_y][f_x].done = true;
 				}
-
-				fought = true;
 			}
 			
 			hasMoved = true;
@@ -254,35 +298,35 @@ void display(char M[r][c]) {
 		for(int j=0; j<c; j++){
 			if(M[i][j] == ENEMY){
 				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
-				cout<<ENEMY<<' ';
+				wcout<<ENEMY<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == OPT){
 				SetConsoleTextAttribute(hConsole, OPT_COLOR);
-				cout<<OPT<<' ';
+				wcout<<OPT<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == DOOR){
 				SetConsoleTextAttribute(hConsole, DOOR_COLOR);
-				cout<<DOOR<<' ';
+				wcout<<DOOR<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == BOSS){
 				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
-				cout<<BOSS<<' ';
+				wcout<<BOSS<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == SHOP){
 				SetConsoleTextAttribute(hConsole, SHOP_COLOR);
-				cout<<SHOP<<' ';
+				wcout<<SHOP<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
-			}else if(M[i][j] == WALL){
+			}else if(M[i][j] == '#'){
 				SetConsoleTextAttribute(hConsole, WALL_COLOR);
-				cout<<WALL<<' ';
+				wcout<<WALL<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == '*'){
-				cout<<"  ";
+				wcout<<"  ";
 			}else{
-				cout<<M[i][j]<<' ';
+				wcout<<M[i][j]<<' ';
 			}
 		}
-		cout<<endl;
+		wcout<<endl;
 	}	
 
 	player1.hasMoved = true;
@@ -388,7 +432,7 @@ void get_sample(int n, char M[r][c]) {
     	for(int j=0; j<c; j++) {
     		myFile >> a;
     		if(a != '\n'){
-    			M[i][j] = a;
+				M[i][j] = a;
     		} else {
     			j--;
     		}
@@ -473,6 +517,12 @@ void generate_zone(char M[r][c], bool spawn = false) {
 			
 			if(M[i][j] == SHOP)
 				map.floor[player1.f_y][player1.f_x].npc_map[i][j] = SHOP_TYPE;
+
+			if(M[i][j] == WALL)
+				map.floor[player1.f_y][player1.f_x].npc_map[i][j] = WALL_TYPE;
+				
+			if(M[i][j] == DOOR)
+				map.floor[player1.f_y][player1.f_x].npc_map[i][j] = DOOR_TYPE;
 		}
 	}
 
@@ -495,8 +545,6 @@ void generate_zone(char M[r][c], bool spawn = false) {
 	}
 
 	display(M);
-	setCursorPosition(r*2+3, 7);
-	cout<<map.floor[player1.f_y][player1.f_x].zoneType;
 	
 	map.floor[player1.f_y][player1.f_x].discovered = true;
 }
@@ -529,7 +577,7 @@ void generate_floor(int level) {
 	fixed_rooms++;
 
 	while(fixed_rooms < rooms) {
-		cout<<"Fixed Rooms: "<<fixed_rooms<<endl;
+		wcout<<"Fixed Rooms: "<<fixed_rooms<<endl;
 		for(int i=0; i<fixed_rooms; i++) {
 		
 			x = queue[i].x;
@@ -692,6 +740,8 @@ void showMap() {
 	char input;
 	char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2];
 	int x, y;
+
+    _setmode(_fileno(stdout), 0x10000);
 	system("CLS");
 	setCursorPosition(0, 0);
 	
@@ -700,60 +750,60 @@ void showMap() {
 	for(int i=0; i<(f_r*2)+y_d*2; i++){
 		for(int j=0; j<(f_c*4)+x_d*2; j++){
 			if(j<3 || j>(f_c*4+x_d*2)-4 || i<3 || i>(f_r*2+y_d*2)-4)
-				cout<<miniMap[i][j];
+				wcout<<miniMap[i][j];
 				// If it is a corner:
 			else if((miniMap[i][j] == TUL) || (miniMap[i][j] == TUR) || (miniMap[i][j] == TDL) || (miniMap[i][j] == TDR) || (miniMap[i][j] == TUDLR) || (miniMap[i][j] == TUDL) || (miniMap[i][j] == TUDR) || (miniMap[i][j] == TULR) || miniMap[i][j] == TDLR){
 				if(map.floor[(i-y_d)/2][(j-x_d)/4].discovered || map.floor[((i-y_d)/2)-1][(j-x_d)/4].discovered || map.floor[(i-y_d)/2][((j-x_d)/4)-1].discovered || map.floor[((i-y_d)/2)-1][((j-x_d)/4)-1].discovered)
-					cout<<miniMap[i][j];
+					wcout<<miniMap[i][j];
 				else
-					cout<<' ';
+					wcout<<' ';
 			}   // If it is a vertical pipe:
 			else if(miniMap[i][j] == TUD || miniMap[i][j] == UD){
 				if(map.floor[(i-y_d-1)/2][(j-x_d)/4].discovered || map.floor[(i-y_d-1)/2][(j-x_d)/4-1].discovered)
-					cout<<miniMap[i][j];
+					wcout<<miniMap[i][j];
 				else
-					cout<<' ';	
+					wcout<<' ';	
 			}   // If it is an orizontal pipe
 			else if(miniMap[i][j] == TLR || miniMap[i][j] == LR) {
 				if(map.floor[(i-y_d-(i%2))/2][(j-x_d)/4].discovered || map.floor[(i-y_d-(i%2))/2+1][(j-x_d)/4].discovered)
-					cout<<miniMap[i][j];
+					wcout<<miniMap[i][j];
 				else
-					cout<<' ';
+					wcout<<' ';
 			}
 			else if(miniMap[i][j] == PLAYER){
 				SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
-				cout<<PLAYER;
+				wcout<<PLAYER;
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else if(miniMap[i][j] == SPAWN){
 				SetConsoleTextAttribute(hConsole, 8);
-				cout<<SPAWN;
+				wcout<<SPAWN;
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else if(miniMap[i][j] == '~' && !map.floor[(i-y_d-1)/2][(j-x_d-2)/4].done && map.floor[(i-y_d-1)/2][(j-x_d-2)/4].discovered) {
 				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
-				cout<<'~';
+				wcout<<'~';
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else if(miniMap[i][j] == BOSS){
 				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
-				cout<<BOSS;
+				wcout<<BOSS;
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else if(miniMap[i][j] == SHOP){
 				SetConsoleTextAttribute(hConsole, SHOP_COLOR);
-				cout<<SHOP;
+				wcout<<SHOP;
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else{
 				if(map.floor[(i-y_d-1)/2][(j-x_d-2)/4].discovered)
-					cout<<miniMap[i][j];
+					wcout<<miniMap[i][j];
 				else
-					cout<<' ';
+					wcout<<' ';
 			}
 				
 		}
-		cout<<endl;
+		wcout<<endl;
 	}
 	
 	getch();
@@ -837,7 +887,7 @@ void action(char zone[r][c], char input) {
 		case 'x': {
 			n=0;
 			system("CLS");
-			cout << "Are you sure you want to exit? Every unsaved progresses will be lost (Y/N)";
+			wcout << "Are you sure you want to exit? Every unsaved progresses will be lost (Y/N)";
 			showConsoleCursor(true);
 			a = getch();
 			if(a == 'y' || a == 'Y')
