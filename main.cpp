@@ -1,46 +1,38 @@
 #include <windows.h>	// Hey! I don't like doin' it flashy....
+#include <Windows.h>
+#include <Wincon.h>
+#include <winbase.h>
 #include <iomanip>		// Boh
 #include <ctime>		// Random Level/Floors/Zones generation
 #include <conio.h>		// Get keypress char data without waiting for newline command
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
-#include <cmath>		// Required for computing SQRTs
-#include <fcntl.h>
-#include <io.h>
-#include <string>
-#include "enemy.h"
+#include <cmath>
+#include "file.h"
 
 #define WIN32_LEAN_AND_MEAN
-
 #define SPAWN_TYPE 0
 #define BOSS_TYPE 1
 #define SHOP_TYPE 2
-#define ENEMY_TYPE 3
-#define OPT_TYPE 4
-#define WALL_TYPE 5
-#define DOOR_TYPE 6
-
-#define MAX_BOSSES 2
-#define MAX_SHOPS 2
 
 #define BOSS_COLOR 13
 #define PLAYER_COLOR 11
 #define ENEMY_COLOR 4
 #define OPT_COLOR 6
-#define SHOP_COLOR 9
+#define SHOP_COLOR 3
 #define DOOR_COLOR 7
-#define WALL_COLOR 15
 
-#define f_r 12
+#define MAX_BOSSES 2
+#define MAX_SHOPS 2
+
+#define f_r 10
 #define f_c 25
 #define r 15
 #define c 15
-#define x_d 5			//frame x and y buffer
+#define x_d 5
 #define y_d 3
-#define x_ds 12			//shop x and y offset
-#define y_ds 3
-#define zones 18 
+#define zones 14
 #define KEY_UP 72
 #define KEY_DOWN 80
 #define KEY_LEFT 75
@@ -52,10 +44,12 @@ using namespace std;
 
 Enemy enemy;
 int NumSpell = 1;
-string codes[5] = {"10000001", "0", "0", "0", "0"};
+string codes[5] = {"10000001", "10000002", "10000003", "10000004", "10000005"};
 
 void display(char M[r][c]);
-void setCursorPosition(int, int);
+void drawInventory();
+void lossScreen();
+void victoryScreen();
 
 int n;
 char UD = 179;
@@ -81,23 +75,23 @@ char TUDLR = 206;
 char UL = 217;
 char DR = 218;
 char PLAYER = '@';
-char SPAWN = char(245);
 char ENEMY = 'E';
 char OPT = 'P';
+char SHOP = char(207);
 char BOSS = 'X';
-char SHOP = '$';
 char DOOR = 'A';
 char WALL = '#';
 int lvl;
-
+int bossCount = 0;
 
 struct myZone {
 	bool done;
 	bool discovered;
 	int enemies_count;
-	int npc_map[r][c];
+	int enemies[r][c];
 	int zoneType;
 	int doors;
+	int chests[r][c];
 	int x;
 	int y;
 };
@@ -112,94 +106,80 @@ myFloor map;
 bool interactable;
 
 void shutdown() {
+	ofstream File ("Data/Enemy/Tut.txt");
+	File << 1;
+	File.close();
 	exit(0);
-}
-
-void drawShop(bool erase = false) {
-	setCursorPosition(c*2+x_ds, y_ds);
-	if(erase) {
-		wcout<<' ';
-		for(int i=0; i<30; i++)
-			wcout<<' ';
-		wcout<<' ';
-		for(int i=0; i<7; i++){
-			setCursorPosition(c*2+x_ds, y_ds+i+1);
-			wcout<<' ';
-			for(int j=0; j<30; j++){
-				wcout<<' ';
-			}
-			wcout<<' ';
-		}
-		setCursorPosition(c*2+x_ds, y_ds+8);
-		wcout<<' ';
-		for(int i=0; i<30; i++)
-			wcout<<' ';
-		wcout<<' ';
-
-		return;
-	}
-
-	wcout<<TDR;
-	for(int i=0; i<30; i++)
-		wcout<<TLR;
-	wcout<<TDL;
-	for(int i=0; i<7; i++){
-		setCursorPosition(c*2+x_ds, y_ds+i+1);
-		wcout<<TUD;
-		for(int j=0; j<30; j++){
-			wcout<<' ';
-		}
-		wcout<<TUD;
-	}
-	setCursorPosition(c*2+x_ds, y_ds+8);
-	wcout<<TUR;
-	for(int i=0; i<30; i++)
-		wcout<<TLR;
-	wcout<<TUL;
-
-	return;
 }
 
 class Player {
 	public:
 		bool hasMoved;
-		bool shopping = false;
+		bool fought;
+
 		int x;
 		int y;
 		int f_x;
 		int f_y;
 		int l_x = 7;
 		int l_y = 7;
+		int LvL;
+		float armor = 20;
+		int MaxHealth = 100;
+		int MaxMana = 200;
+		int Health;
+		int Mana;
+		int Exp;
+		int *health = &Health;
+		int *mana = &Mana;
+		int spellCount = 0;
+		int coin = 0;
 
-		void refresh(char M[r][c]) {
+		void lvlup()
+		{
+			LvL++;
+			Health = MaxHealth*LvL;
+			Mana = MaxMana*LvL;
+			armor *= LvL;
+		}
 
-			if(map.floor[f_y][f_x].npc_map[l_y][l_x] == SHOP_TYPE) {
-				SetConsoleTextAttribute(hConsole, SHOP_COLOR);
-				setCursorPosition(l_x*2, l_y);
-				wcout << SHOP;
-			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == BOSS_TYPE) {
-				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
-				setCursorPosition(l_x*2, l_y);
-				wcout << BOSS;;
-			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == ENEMY_TYPE) {
-				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
-				setCursorPosition(l_x*2, l_y);
-				wcout << ENEMY;
-			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == OPT_TYPE) {
-				SetConsoleTextAttribute(hConsole, OPT_COLOR);
-				setCursorPosition(l_x*2, l_y);
-				wcout << OPT;
-			}else{
-				setCursorPosition(l_x*2, l_y);
- 				wcout << ' ';
-			}
-
+		void refresh() {
+			setCursorPosition(l_x*2, l_y);
+			cout << ' ';
 			setCursorPosition(x*2, y);
 			SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
-			wcout << PLAYER;
+			cout << PLAYER;
 			SetConsoleTextAttribute(hConsole, 15);
 		}
 		
+		void getSpell(string code) {
+			enemy.spell.SpellNameSearch(code, spellCount);
+			spellCount++;
+		}
+
+		int get_spawn_distance() {
+    	float distance;
+    	distance = sqrt((f_x-f_r/2)*(f_x-f_r/2) + (f_y-f_c/2)*(f_y-f_c/2));
+    	return (int)distance/10;
+		}
+		
+		void displayStats() {
+			setCursorPosition(34, 6);
+			cout<<"Your Stats:";
+			setCursorPosition(38, 7);
+			cout<<"Health:";
+			setCursorPosition(50, 7);
+			cout<<Health;
+			setCursorPosition(38, 8);
+			cout<<"Armor:";
+			setCursorPosition(50, 8);
+			cout<<armor;
+			setCursorPosition(38, 9);
+			cout<<"Mana:";
+			setCursorPosition(50, 9);
+			cout<<Mana;
+		}
+
 		char move(char M[r][c], int dir) {
 			char dest;
 
@@ -208,129 +188,161 @@ class Player {
 			
 			switch(dir) {
 				case 1:{
-					dest = map.floor[f_y][f_x].npc_map[y-1][x];
+					dest = M[y-1][x];
 					break;
 				}
 				case 2:{
-					dest = map.floor[f_y][f_x].npc_map[y][x-1];
+					dest = M[y][x-1];
 					break;
 				}
 				case 3: {
-					dest = map.floor[f_y][f_x].npc_map[y+1][x];
+					dest = M[y+1][x];
 					break;
 				}
 				case 4:{
-					dest = map.floor[f_y][f_x].npc_map[y][x+1];
+					dest = M[y][x+1];
 					break;
 				}
 			}
 			
-			if(dest == WALL_TYPE)
+			if(dest == WALL)
 				return WALL;
 			
-			if(dest == DOOR_TYPE && !map.floor[f_y][f_x].done){
-				setCursorPosition(c, r+3);
-				if(map.floor[f_y][f_x].enemies_count == 1)
-					wcout<<"You cannot exit until you have defeated all the enemies. "<<map.floor[f_y][f_x].enemies_count<<" enemy remaning";
-				else
-					wcout<<"You cannot exit until you have defeated all the enemies. "<<map.floor[f_y][f_x].enemies_count<<" enemies remaning";
-				setCursorPosition(x*2, y);
+			if(dest == DOOR && !map.floor[f_y][f_x].done){
 				return 'A';	
 			}
+			
+			if(dest == ENEMY) {
+				cls();
 
+				if(enemy.EnemyControl(*health, *mana, armor))
+				{
+					drawInventory();
+					enemy.DisplayEnemy(0);
+					enemy.Stats(lvl);
+					enemy.DisplayStats();
+					displayStats();
+					while(enemy.Fight(*health, *mana, armor))
+						displayStats();
+					if(Health <= 0)
+						lossScreen();
+					coin += enemy.Rewards(lvl);
+				}
+
+				if(Exp == 100*LvL)
+					lvlup();
+
+				display(M);
+				refresh();
+
+				map.floor[f_y][f_x].enemies[y][x] = 0;
+				map.floor[f_y][f_x].enemies_count--;
+				if(map.floor[f_y][f_x].enemies_count == 0) {
+					map.floor[f_y][f_x].done = true;
+				}
+				fought = true;
+			}
+			
 			switch(dir) {
 				case 1:{
 					y--;
+					if(fought)
+						M[y][x] = ' ';
 					break;
+					fought = false;
 				}
 				case 2:{
 					x--;
+					if(fought)
+						M[y][x] = ' ';
 					break;
+					fought = false;
 				}
 				case 3: {
 					y++;
+					if(fought)
+						M[y][x] = ' ';
 					break;
+					fought = false;
 				}
 				case 4:{
 					x++;
+					if(fought)
+						M[y][x] = ' ';
 					break;
-				}
-			}
-
-			if(dest == SHOP_TYPE) {
-				drawShop();
-				shopping = true;
-			}else if(shopping){
-				drawShop(true);
-			}
-			
-			if(dest == ENEMY_TYPE) {
-				cls();
-				enemy.EnemyControl(codes);
-				enemy.DisplayEnemy(0);
-				enemy.Stats(0.5);
-				enemy.DisplayStats(codes);
-				enemy.Fight();
-				display(M);
-				refresh(M);
-
-				M[y][x] = ' ';
-				map.floor[f_y][f_x].npc_map[y][x] = 0;
-				map.floor[f_y][f_x].enemies_count--;
-
-
-				if(map.floor[f_y][f_x].enemies_count == 0) {
-					map.floor[f_y][f_x].done = true;
+					fought = false;
 				}
 			}
 			
 			hasMoved = true;
-			return dest;
+			return ' ';
 		}
 };
 
 Player player1;
 
+void drawInventory() {
+	setCursorPosition(3, 18);
+	cout<<(char)TDR;
+
+	for(int i=0; i<61; i++)
+		cout<<(char)TLR;
+	
+	cout<<(char)TDL;
+
+	for(int i=0; i<24; i++) {
+		setCursorPosition(3, 18+i+1);
+		cout<<(char)TUD;
+		setCursorPosition(65, 18+i+1);
+		cout<<(char)TUD;
+	}
+
+	setCursorPosition(3, 43);
+	cout<<TUR;
+	
+	for(int i=0; i<61; i++)
+		cout<<(char)TLR;
+	
+	cout<<(char)TUL;
+
+	for(int i=0; i<player1.spellCount && i<3; i++) {
+		enemy.spell.displaySpell(5+i*20, 19, i, i);
+	}
+
+	for(int i=3; i<player1.spellCount; i++) {
+		enemy.spell.displaySpell(15+(i-3)*20, 31, i, i);
+	}
+
+	return;
+}
+
 void display(char M[r][c]) {
 	system("CLS");
-
 	for(int i=0; i<r; i++) {
 		for(int j=0; j<c; j++){
 			if(M[i][j] == ENEMY){
 				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
-				wcout<<ENEMY<<' ';
+				cout<<M[i][j]<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == OPT){
 				SetConsoleTextAttribute(hConsole, OPT_COLOR);
-				wcout<<OPT<<' ';
+				cout<<M[i][j]<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == DOOR){
 				SetConsoleTextAttribute(hConsole, DOOR_COLOR);
-				wcout<<DOOR<<' ';
-				SetConsoleTextAttribute(hConsole, 15);
-			}else if(M[i][j] == BOSS){
-				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
-				wcout<<BOSS<<' ';
-				SetConsoleTextAttribute(hConsole, 15);
-			}else if(M[i][j] == SHOP){
-				SetConsoleTextAttribute(hConsole, SHOP_COLOR);
-				wcout<<SHOP<<' ';
-				SetConsoleTextAttribute(hConsole, 15);
-			}else if(M[i][j] == '#'){
-				SetConsoleTextAttribute(hConsole, WALL_COLOR);
-				wcout<<WALL<<' ';
+				cout<<M[i][j]<<' ';
 				SetConsoleTextAttribute(hConsole, 15);
 			}else if(M[i][j] == '*'){
-				wcout<<"  ";
+				cout<<"  ";
 			}else{
-				wcout<<M[i][j]<<' ';
+				cout<<M[i][j]<<' ';
 			}
 		}
-		wcout<<endl;
+		cout<<endl;
 	}	
 
 	player1.hasMoved = true;
-	player1.refresh(M);
+	player1.refresh();
 	setCursorPosition(player1.x, player1.y);
 }
 
@@ -355,75 +367,59 @@ void get_sample(int n, char M[r][c]) {
 			break;
 		}
 		case 3: {
-			myFile.open("data/zone_01.txt");
-			break;
-		}
-		case 4: {
-			myFile.open("data/zone_02.txt");
-			break;
-		}
-		case 5: {
 			myFile.open("data/zone_03.txt");
 			break;
 		}
-		case 6: {
+		case 4: {
 			myFile.open("data/zone_04.txt");
 			break;
 		}
-		case 7: {
+		case 5: {
 			myFile.open("data/zone_05.txt");
 			break;
 		}
-		case 8: {
+		case 6: {
 			myFile.open("data/zone_06.txt");
 			break;
 		}
-		case 9: {
+		case 7: {
 			myFile.open("data/zone_07.txt");
 			break;
 		}
-		case 10: {
+		case 8: {
 			myFile.open("data/zone_08.txt");
 			break;
 		}
-		case 11: {
+		case 9: {
 			myFile.open("data/zone_09.txt");
 			break;
 		}
-		case 12: {
+		case 10: {
 			myFile.open("data/zone_10.txt");
 			break;
 		}
-		case 13: {
+		case 11: {
 			myFile.open("data/zone_11.txt");
 			break;
 		}
-		case 14: {
+		case 12: {
 			myFile.open("data/zone_12.txt");
 			break;
 		}
-		case 15: {
+		case 13: {
 			myFile.open("data/zone_13.txt");
 			break;
 		}
-		case 16: {
+		case 14: {
 			myFile.open("data/zone_14.txt");
 			break;
 		}
-		case 17: {
+		case 15: {
 			myFile.open("data/zone_15.txt");
 			break;
 		}
-		case 18: {
+		case 16: {
 			myFile.open("data/zone_16.txt");
-			break;
-		}
-		case 19: {
-			myFile.open("data/zone_17.txt");
-			break;
-		}
-		case 20: {
-			myFile.open("data/zone_18.txt");
 			break;
 		}
 	}
@@ -432,7 +428,7 @@ void get_sample(int n, char M[r][c]) {
     	for(int j=0; j<c; j++) {
     		myFile >> a;
     		if(a != '\n'){
-				M[i][j] = a;
+    			M[i][j] = a;
     		} else {
     			j--;
     		}
@@ -441,7 +437,7 @@ void get_sample(int n, char M[r][c]) {
   	}
 }
 
-void generate_enemies(char M[r][c], bool opt = false, bool boss = false, bool shop = false) {
+void generate_enemies(char M[r][c], bool opt = false, bool boss = false) {
 	int count = 0;
 	int i, j;
 	
@@ -454,7 +450,7 @@ void generate_enemies(char M[r][c], bool opt = false, bool boss = false, bool sh
 		
 		if(M[i][j] == ' ') {
 			M[i][j] = ENEMY;
-			map.floor[player1.f_y][player1.f_x].npc_map[i][j] = ENEMY_TYPE;
+			map.floor[player1.f_y][player1.f_x].enemies[i][j] = 1;
 			count++;
 		}
 	}
@@ -469,12 +465,23 @@ void generate_enemies(char M[r][c], bool opt = false, bool boss = false, bool sh
 	
 		return;	
 	}
+
+	if(boss){
+		for(i=0; i<r; i++){
+			for(j=0; j<c; j++){
+				if(M[i][j] == 'X')
+					M[i][j] = 'X';
+			}
+		}	
+	
+		return;	
+	}
 	
 	for(i=0; i<r; i++){
 		for(j=0; j<c; j++){
 			if(M[i][j] == '*'){
 				if(rand()%(10-lvl*2) == 0){
-					map.floor[player1.f_y][player1.f_x].npc_map[i][j] = OPT_TYPE;
+					map.floor[player1.f_y][player1.f_x].enemies[i][j] = 2;
 					M[i][j] = OPT;
 				}
 			}
@@ -482,7 +489,7 @@ void generate_enemies(char M[r][c], bool opt = false, bool boss = false, bool sh
 	}
 }
 
-void generate_zone(char M[r][c], bool spawn = false) {
+void generate_zone(char M[r][c], bool spawn = false, bool shop = false, bool boss = false) {
 	int a;
 	int type = map.floor[player1.f_y][player1.f_x].zoneType;
 	int enemies = 0;
@@ -504,46 +511,12 @@ void generate_zone(char M[r][c], bool spawn = false) {
 		player1.x = 7;
  	}
  	
- 	if(spawn || map.floor[player1.f_y][player1.f_x].zoneType == SHOP_TYPE)
+ 	if(spawn || shop)
  		map.floor[player1.f_y][player1.f_x].done = true;
 		 	
- 	if(map.floor[player1.f_y][player1.f_x].zoneType != SPAWN_TYPE && map.floor[player1.f_y][player1.f_x].zoneType != SHOP_TYPE && map.floor[player1.f_y][player1.f_x].zoneType != BOSS_TYPE && !map.floor[player1.f_y][player1.f_x].done)
+ 	if(!spawn && !shop && !boss && !map.floor[player1.f_y][player1.f_x].done)
 		generate_enemies(M, 1);
-	
-	for(int i=0; i<r; i++){
-		for(int j=0; j<c; j++){
-			if(M[i][j] == BOSS)
-				map.floor[player1.f_y][player1.f_x].npc_map[i][j] = BOSS_TYPE;
-			
-			if(M[i][j] == SHOP)
-				map.floor[player1.f_y][player1.f_x].npc_map[i][j] = SHOP_TYPE;
-
-			if(M[i][j] == WALL)
-				map.floor[player1.f_y][player1.f_x].npc_map[i][j] = WALL_TYPE;
-				
-			if(M[i][j] == DOOR)
-				map.floor[player1.f_y][player1.f_x].npc_map[i][j] = DOOR_TYPE;
-		}
-	}
-
-	if(map.floor[player1.f_y][player1.f_x].zoneType == BOSS_TYPE) {
-		for(int i=0; i<r; i++){
-			for(int j=0; j<c; j++){
-				if(M[i][j] == BOSS)
-					M[i][j] = BOSS;
-			}
-		}
-	}
 		
-	if(map.floor[player1.f_y][player1.f_x].zoneType == SHOP_TYPE) {
-		for(int i=0; i<r; i++){
-			for(int j=0; j<c; j++){
-				if(M[i][j] == SHOP)
-					M[i][j] = SHOP;
-			}
-		}
-	}
-
 	display(M);
 	
 	map.floor[player1.f_y][player1.f_x].discovered = true;
@@ -570,14 +543,14 @@ void generate_floor(int level) {
 			map.floor[i][j].zoneType = -1;			// Sets all possible zone positions as empty
 	}
 	
-	map.floor[a][b].zoneType = SPAWN_TYPE;					// Sets spawn room
+	map.floor[a][b].zoneType = SPAWN_TYPE;					// Sets spawn_TYPE room
 	queue[0] = map.floor[a][b];
 	queue[0].x = a;
 	queue[0].y = b;
 	fixed_rooms++;
 
 	while(fixed_rooms < rooms) {
-		wcout<<"Fixed Rooms: "<<fixed_rooms<<endl;
+		cout<<"Fixed Rooms: "<<fixed_rooms<<endl;
 		for(int i=0; i<fixed_rooms; i++) {
 		
 			x = queue[i].x;
@@ -597,7 +570,7 @@ void generate_floor(int level) {
 				}
 			}
 			// This mf of an if statement works to check if the cell is occupied, has more than 1 neightbour or a random 50% chance to know if it can become a room
-			if(x != 0 && x != f_r-1 && y != 0 && y != f_c-1 && map.floor[x][y].zoneType == -1 && ((map.floor[x+1][y].zoneType != -1) + (map.floor[x-1][y].zoneType != -1) + (map.floor[x][y+1].zoneType != -1) + (map.floor[x][y-1].zoneType != -1) + (map.floor[x-1][y-1].zoneType != -1) + (map.floor[x+1][y-1].zoneType != -1) + (map.floor[x-1][y+1].zoneType != -1) + (map.floor[x+1][y+1].zoneType != -1)) < 3 && rand()%2) {
+			if(x != 0 && x != f_r-1 && y != 0 && y != f_c-1 && map.floor[x][y].zoneType == -1 && ((map.floor[x+1][y].zoneType != -1) + (map.floor[x-1][y].zoneType != -1) + (map.floor[x][y+1].zoneType != -1) + (map.floor[x][y-1].zoneType != -1) + (map.floor[x-1][y-1].zoneType != -1) + (map.floor[x+1][y-1].zoneType != -1) + (map.floor[x-1][y+1].zoneType != -1) + (map.floor[x+1][y+1].zoneType != -1)) < 4 && rand()%2) {
 				do{
 					map.floor[x][y].zoneType = rand()%zones+3;
 				} while(map.floor[x][y].zoneType == queue[i].zoneType);
@@ -621,6 +594,7 @@ void generate_floor(int level) {
 			count++;
 			if(count >= MAX_BOSSES)
 				i = rooms;
+			bossCount++;
 		}
 	}
 	
@@ -636,7 +610,6 @@ void generate_floor(int level) {
 				i = rooms;
 		}
 	}
-
 }
 
 void generateMap(char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
@@ -730,7 +703,7 @@ void generateMap(char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2]) {
 				else if(map.floor[i][j].zoneType == SHOP_TYPE && map.floor[i][j].discovered)
 					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = SHOP;
 				else
-					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = '~';
+					miniMap[(2*i)+y_d+1][(4*j)+x_d+2] = 126;
 			}
 		}
 	}
@@ -740,8 +713,6 @@ void showMap() {
 	char input;
 	char miniMap[(f_r*2)+y_d*2][(f_c*4)+x_d*2];
 	int x, y;
-
-    _setmode(_fileno(stdout), 0x10000);
 	system("CLS");
 	setCursorPosition(0, 0);
 	
@@ -750,60 +721,64 @@ void showMap() {
 	for(int i=0; i<(f_r*2)+y_d*2; i++){
 		for(int j=0; j<(f_c*4)+x_d*2; j++){
 			if(j<3 || j>(f_c*4+x_d*2)-4 || i<3 || i>(f_r*2+y_d*2)-4)
-				wcout<<miniMap[i][j];
+				cout<<miniMap[i][j];
 				// If it is a corner:
 			else if((miniMap[i][j] == TUL) || (miniMap[i][j] == TUR) || (miniMap[i][j] == TDL) || (miniMap[i][j] == TDR) || (miniMap[i][j] == TUDLR) || (miniMap[i][j] == TUDL) || (miniMap[i][j] == TUDR) || (miniMap[i][j] == TULR) || miniMap[i][j] == TDLR){
 				if(map.floor[(i-y_d)/2][(j-x_d)/4].discovered || map.floor[((i-y_d)/2)-1][(j-x_d)/4].discovered || map.floor[(i-y_d)/2][((j-x_d)/4)-1].discovered || map.floor[((i-y_d)/2)-1][((j-x_d)/4)-1].discovered)
-					wcout<<miniMap[i][j];
+					cout<<miniMap[i][j];
 				else
-					wcout<<' ';
-			}   // If it is a vertical pipe:
+					cout<<' ';
+			}
+				// If it is a vertical pipe:
 			else if(miniMap[i][j] == TUD || miniMap[i][j] == UD){
 				if(map.floor[(i-y_d-1)/2][(j-x_d)/4].discovered || map.floor[(i-y_d-1)/2][(j-x_d)/4-1].discovered)
-					wcout<<miniMap[i][j];
+					cout<<miniMap[i][j];
 				else
-					wcout<<' ';	
-			}   // If it is an orizontal pipe
+					cout<<' ';	
+			}
+				// If it is an orizontal pipe
 			else if(miniMap[i][j] == TLR || miniMap[i][j] == LR) {
 				if(map.floor[(i-y_d-(i%2))/2][(j-x_d)/4].discovered || map.floor[(i-y_d-(i%2))/2+1][(j-x_d)/4].discovered)
-					wcout<<miniMap[i][j];
+					cout<<miniMap[i][j];
 				else
-					wcout<<' ';
+					cout<<' ';
 			}
 			else if(miniMap[i][j] == PLAYER){
 				SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
-				wcout<<PLAYER;
+				cout<<'@';
 				SetConsoleTextAttribute(hConsole, 15);
 			}
-			else if(miniMap[i][j] == SPAWN){
+			else if(miniMap[i][j] == char(245)){
 				SetConsoleTextAttribute(hConsole, 8);
-				wcout<<SPAWN;
+				cout<<char(245);
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else if(miniMap[i][j] == '~' && !map.floor[(i-y_d-1)/2][(j-x_d-2)/4].done && map.floor[(i-y_d-1)/2][(j-x_d-2)/4].discovered) {
 				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
-				wcout<<'~';
+				cout<<'~';
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else if(miniMap[i][j] == BOSS){
 				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
-				wcout<<BOSS;
+				cout<<'X';
 				SetConsoleTextAttribute(hConsole, 15);
 			}
 			else if(miniMap[i][j] == SHOP){
 				SetConsoleTextAttribute(hConsole, SHOP_COLOR);
-				wcout<<SHOP;
+				cout<<SHOP;
 				SetConsoleTextAttribute(hConsole, 15);
 			}
+
+				// If a character:
 			else{
 				if(map.floor[(i-y_d-1)/2][(j-x_d-2)/4].discovered)
-					wcout<<miniMap[i][j];
+					cout<<miniMap[i][j];
 				else
-					wcout<<' ';
+					cout<<' ';
 			}
 				
 		}
-		wcout<<endl;
+		cout<<endl;
 	}
 	
 	getch();
@@ -812,9 +787,9 @@ void showMap() {
 
 void konamiCode() {
 	for(int i=0; i<f_r; i++){
-		for(int j=0; j<f_c; j++){
-			map.floor[i][j].done = true;
+		for(int j=0; j<f_c; j++) {
 			map.floor[i][j].discovered = true;
+			map.floor[i][j].done = true;
 		}
 	}
 }
@@ -887,7 +862,7 @@ void action(char zone[r][c], char input) {
 		case 'x': {
 			n=0;
 			system("CLS");
-			wcout << "Are you sure you want to exit? Every unsaved progresses will be lost (Y/N)";
+			cout << "Are you sure you want to exit? Every unsaved progresses will be lost (Y/N)";
 			showConsoleCursor(true);
 			a = getch();
 			if(a == 'y' || a == 'Y')
@@ -908,28 +883,59 @@ void action(char zone[r][c], char input) {
 		konamiCode();
 }
 
+void lossScreen() {
+	cls();
+
+	setCursorPosition(0, 0);
+
+	cout<<"__/\\\\\\___________________/\\\\\\\\\\__________/\\\\\\\\\\\\\\\\\\\\\\____/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\_        \n _\\/\\\\\\_________________/\\\\\\///\\\\\\______/\\\\\\/////////\\\\\\_\\///////\\\\\\/////__       \n  _\\/\\\\\\_______________/\\\\\\/__\\///\\\\\\___\\//\\\\\\______\\///________\\/\\\\\\_______      \n   _\\/\\\\\\______________/\\\\\\______\\//\\\\\\___\\////\\\\\\_______________\\/\\\\\\_______     \n    _\\/\\\\\\_____________\\/\\\\\\_______\\/\\\\\\______\\////\\\\\\____________\\/\\\\\\_______    \n     _\\/\\\\\\_____________\\//\\\\\\______/\\\\\\__________\\////\\\\\\_________\\/\\\\\\_______   \n      _\\/\\\\\\______________\\///\\\\\\__/\\\\\\_____/\\\\\\______\\//\\\\\\________\\/\\\\\\_______  \n       _\\/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\____\\///\\\\\\\\\\/_____\\///\\\\\\\\\\\\\\\\\\\\\\/_________\\/\\\\\\_______ \n        _\\///////////////_______\\/////_________\\///////////___________\\///________\n\n";
+
+	Pause();
+
+	shutdown();
+}
+
+void victoryScreen() {
+	cls();
+
+	setCursorPosition(0, 0);
+
+	cout<<"___________________________________________________________\n  _    _     __     __   ______     __     ____     _     _\n  |   /      /    /    )   /      /    )   /    )   |    / \n--|--/------/----/--------/------/----/---/___ /----|---/--\n  | /      /    /        /      /    /   /    |     |  /   \n__|/____ _/_ __(____/___/______(____/___/_____|_____|_/____\n                                                     /     \n                                                 (_ /      \n";
+	
+	Pause();
+
+	shutdown();
+}
+
 int main() {
+	player1.LvL = 0;
+	player1.lvlup();
+	
 	char zone[r][c];
 	char input;
 	bool level_done = false;
 	bool openMap = false;
 	
 	showConsoleCursor(false);
-
-	ShowWindow(GetConsoleWindow(), SW_MAXIMIZE);
-	SendMessage(GetConsoleWindow(), WM_SYSKEYDOWN, VK_RETURN, 0x20000000);
+	ShowWindow(GetConsoleWindow(),SW_MAXIMIZE);
+	SendMessage(GetConsoleWindow(),WM_SYSKEYDOWN,VK_RETURN,0x20000000);
 	
+	player1.getSpell(codes[0]);
+	player1.getSpell(codes[1]);
+
 	for(int i=1; i<MAX_LVL; i++) {
 		lvl = i;
 		
 		generate_floor(i);
+		setCursorPosition(7, 7);
+	
 		generate_zone(zone, true);
 		
 		while(!level_done) {
 			showConsoleCursor(false);
 			
 			if(player1.hasMoved)
-				player1.refresh(zone);
+				player1.refresh();
 			
 			input = getch();
 			
@@ -954,6 +960,11 @@ int main() {
 				player1.f_y++;
 				player1.y = 1;
 				generate_zone(zone);
+			}
+
+			if(bossCount <= 0) {
+				victoryScreen();
+				level_done = true;
 			}
 		}
 	}
