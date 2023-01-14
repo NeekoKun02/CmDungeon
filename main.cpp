@@ -5,8 +5,6 @@
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
-#include <cmath>		// Required for computing SQRTs
-#include <string>
 #include "enemy.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -52,8 +50,7 @@ using namespace std;
 
 Enemy enemy;
 int NumSpell = 1;
-string codes[5] = {"10000001", "0", "0", "0", "0"};
-
+string codes[5] = {"10000001", "10000001", "0", "0", "0"};
 void display(char M[r][c]);
 void setCursorPosition(int, int);
 
@@ -112,6 +109,9 @@ myFloor map;
 bool interactable;
 
 void shutdown() {
+	ofstream File ("Data/Enemy/Tut.txt");
+	File << 0;
+	File.close();
 	exit(0);
 }
 
@@ -161,6 +161,37 @@ void drawShop(bool erase = false) {
 }
 
 class Player {
+	public:
+		bool hasMoved;
+		bool fought;
+		int x;
+		int y;
+		int f_x;
+		int f_y;
+		int l_x = 0;
+		int l_y = 0;
+		int LvL;
+		int MaxHealth = 100;
+		int Health;
+		int Exp;
+		int *health = &Health;
+
+		void lvlup()
+		{
+			LvL++;
+			Health = MaxHealth*LvL;
+		}
+		
+		void refreshSpell()
+		{
+			for(int i=0; i<5; i++)
+			{
+				enemy.codes[i]=codes[i];
+			}
+			
+		}
+
+		void refresh() {
 public:
 	spell spells;
 	int spellCount = 0b000000;
@@ -208,6 +239,14 @@ public:
 		l_x = x;
 		l_y = y;
 		
+		int get_spawn_distance() {
+    	float distance;
+    	distance = sqrt((f_x-f_r/2)*(f_x-f_r/2) + (f_y-f_c/2)*(f_y-f_c/2));
+    	return (int)distance/10;
+		}
+		
+		char move(char M[r][c], int dir) {
+			char dest;
 		switch(dir) {
 			case 1:{
 				dest = map.floor[f_y][f_x].npc_map[y-1][x];
@@ -249,6 +288,30 @@ public:
 				x--;
 				break;
 			}
+			
+			if(dest == ENEMY) {
+				cls();
+				int lvlvl = get_spawn_distance();
+				cout<<lvlvl;
+				Pause();
+				if(enemy.EnemyControl(*health))
+				{
+					enemy.DisplayEnemy(0);
+					enemy.Stats(lvlvl);
+					enemy.DisplayStats(Health);
+					enemy.Fight(*health);
+					enemy.Rewards(lvl);
+				}
+				if(Exp == 100*LvL)
+					lvlup();
+				display(M);
+				refresh();
+				map.floor[f_y][f_x].enemies[y][x] = 0;
+				map.floor[f_y][f_x].enemies_count--;
+				if(map.floor[f_y][f_x].enemies_count == 0) {
+					map.floor[f_y][f_x].done = true;
+				}
+				fought = true;
 			case 3: {
 				y++;
 				break;
@@ -335,6 +398,9 @@ void display(char M[r][c]) {
 	player1.refresh(M);
 	setCursorPosition(player1.x, player1.y);
 }
+
+
+
 
 void get_sample(int n, char M[r][c]) {
 	ifstream myFile;
@@ -910,6 +976,9 @@ void action(char zone[r][c], char input) {
 }
 
 int main() {
+	player1.LvL = 0;
+	player1.lvlup();
+	player1.refreshSpell();
 	char zone[r][c];
 	char input;
 	bool level_done = false;

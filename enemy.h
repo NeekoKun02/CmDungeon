@@ -98,7 +98,7 @@ class Spell{
 		
 		spell spells[5];
 		
-		void SpellDisplay(string* code)//, string code2, string code3, string code4
+		void SpellDisplay(string* code, int PlayerHealth)
 			{
 				setCursorPosition(0, MaxY-5);
 				for(int i=0; i<8; i++){
@@ -111,10 +111,13 @@ class Spell{
 					cout<<endl;	
 				}
 				setCursorPosition(2, MaxY-4);
+				cout<<"        ";
+				setCursorPosition(2, MaxY-4);
+				cout<<"Life: "<<PlayerHealth<<endl;
 				for(int i=0; i<5; i++)
 				{
 					try{
-						setCursorPosition(2, MaxY-4+i);
+						setCursorPosition(2, MaxY-3+i);
 						SpellNameSearch(code[i], i);
 						cout<<i+1<<". "<<spells[i].name<<"      "<<spells[i].dmg;
 					}catch(...){}
@@ -139,21 +142,25 @@ class Spell{
 			}
 			return;
 		}
+		
+		int Use(int armor, int nspell)
+		{
+			return (spells[nspell].dmg/10)*(10-(armor/10));
+		}
 };
 
 
 class Enemy{
-	Spell Spell;
 	public:
-		
+		Spell spell;
 		struct baseEnemy{
 			int life=100;
-			int armor=30;
+			int armor=10;
 			int dmg=10;
 		};
 		baseEnemy BaseEnemy;
 		baseEnemy NewEnemy;
-		
+		string codes[5];
 		void DisplayEnemy(int n)
 		{
 			setCursorPosition(0, 0);
@@ -181,34 +188,68 @@ class Enemy{
 		}
 		
   			
-		void Stats(float lvl)
+		void Stats(int lvl)
 		{
 			NewEnemy.life = BaseEnemy.life*lvl;
 			NewEnemy.armor=BaseEnemy.armor*lvl;
 			NewEnemy.dmg=BaseEnemy.dmg*lvl;
 		}
 		
-		void DisplayStats(string* codes)
+		void DisplayStats(int PlayerHealth)
 		{
 			setCursorPosition(MaxX+5, (MaxY-5)/2);
 			cout<<"                  ";
-			Spell.SpellDisplay(codes);
+			spell.SpellDisplay(codes, PlayerHealth);
 			setCursorPosition(MaxX+4, 1 );
 			cout<<"Enemy:";
 			
 			setCursorPosition(MaxX+4, 2);
+			cout<<"                                                           ";
+			setCursorPosition(MaxX+4, 2);
 			cout<<"\tLife\t"<<NewEnemy.life;
-			
+			setCursorPosition(MaxX+4, 3);
+			cout<<"                                                           ";
 			setCursorPosition(MaxX+4, 3);
 			cout<<"\tArmor\t"<<NewEnemy.armor;
-			
+			setCursorPosition(MaxX+4, 4);
+			cout<<"                                                           ";
 			setCursorPosition(MaxX+4, 4);
 			cout<<"\tAttack Damage\t"<<NewEnemy.dmg;
 			
 		}
 		
 		
-		void Tutorial(string* codes)
+		
+		
+		void End()
+		{
+			exit(0);
+		}
+
+		void Fight(int &PlayerHealth)
+		{
+			while(true)
+			{
+				char input = getch();
+				if(input=='1' || input=='2' || input=='3' || input=='4' || input=='5')
+				{
+					NewEnemy.life-=spell.Use(NewEnemy.armor, input-49);
+					if(NewEnemy.life<=0)
+						return;
+					PlayerHealth-=NewEnemy.dmg;
+					if(PlayerHealth<=0)
+						End();
+					DisplayStats(PlayerHealth);
+				}
+			}
+		}
+		
+		void Rewards(int lvl)
+		{
+			return;
+		}
+		
+		void Tutorial(int PlayerHealth)
 		{
 			cls();
 			DisplayEnemy(1);
@@ -218,7 +259,7 @@ class Enemy{
 			Pause();
 			setCursorPosition(MaxX+5, (MaxY-5)/2);
 			cout<<"                  ";
-			DisplayStats(codes);
+			DisplayStats(PlayerHealth);
 			setCursorPosition(MaxX+5, MaxY-3);
 			cout<<"These are the spell you can use,";
 			setCursorPosition(MaxX+5, MaxY-2);
@@ -233,10 +274,16 @@ class Enemy{
 			setCursorPosition(MaxX+35, 3);
 			cout<<"all the information needed to defeat the enemy";
 			Pause();
+			cls();
+			DisplayEnemy(0);
+			Stats(1);
+			DisplayStats(PlayerHealth);
+			Fight(PlayerHealth);
+			Rewards(1);
 		}
 		
 		
-		void EnemyControl(string* codes)
+		bool EnemyControl(int PlayerHealth)
 		{
 			char num;
 			string line;
@@ -260,16 +307,12 @@ class Enemy{
 				File << 1;
 				File.close();
 				MessageBox1(1, "", 7);
-				Tutorial(codes);
+				Tutorial(PlayerHealth);
+				return false;
 			}
+			return true;
 
 		}
-
-		void Fight()
-		{
-			Pause();
-			return;
-		}		
 };
 
 
