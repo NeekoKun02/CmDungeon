@@ -30,12 +30,12 @@ void showConsoleCursor(bool showFlag) {
 }
 
 void setCursorPosition(int x, int y)
-		{
-    		static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    		std::cout.flush();
-    		COORD coord = { (SHORT)x, (SHORT)y };
-    			SetConsoleCursorPosition(hOut, coord);
-		}
+{
+	static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	std::cout.flush();
+	COORD coord = { (SHORT)x, (SHORT)y };
+		SetConsoleCursorPosition(hOut, coord);
+}
 
 void cls()
 {
@@ -216,10 +216,7 @@ class Enemy{
 			setCursorPosition(MaxX+4, 4);
 			cout<<"\tAttack Damage\t"<<NewEnemy.dmg;
 			
-		}
-		
-		
-		
+		}		
 		
 		void End()
 		{
@@ -281,7 +278,6 @@ class Enemy{
 			Fight(PlayerHealth);
 			Rewards(1);
 		}
-		
 		
 		bool EnemyControl(int PlayerHealth)
 		{

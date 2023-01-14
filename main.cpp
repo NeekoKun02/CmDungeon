@@ -5,6 +5,7 @@
 #include <fstream>		// File reader for saves and sample zones/floors
 #include <iostream>		// It's basic (I/O system)
 #include <cstdlib>		// IDK wtf does this do
+#include <cmath>
 #include "enemy.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -162,27 +163,31 @@ void drawShop(bool erase = false) {
 
 class Player {
 	public:
-		bool hasMoved;
-		bool fought;
-		int x;
-		int y;
-		int f_x;
-		int f_y;
-		int l_x = 0;
-		int l_y = 0;
-		int LvL;
-		int MaxHealth = 100;
-		int Health;
-		int Exp;
-		int *health = &Health;
+			
+	spell spells;
+	int spellCount = 0b000000;
+	bool hasMoved;
+	bool shopping = false;
+	bool fought;
+	int x;
+	int y;
+	int f_x;
+	int f_y;
+	int l_x = 7;
+	int l_y = 7;
+	int LvL;
+	int MaxHealth = 100;
+	int health;
+	int Exp;
+	int *health = &health;
 
-		void lvlup()
+	void lvlup()
 		{
 			LvL++;
-			Health = MaxHealth*LvL;
+			health = MaxHealth*LvL;
 		}
-		
-		void refreshSpell()
+	
+	void refreshSpell()
 		{
 			for(int i=0; i<5; i++)
 			{
@@ -191,84 +196,70 @@ class Player {
 			
 		}
 
-		void refresh() {
-public:
-	spell spells;
-	int spellCount = 0b000000;
-	bool hasMoved;
-	bool shopping = false;
-	int x;
-	int y;
-	int f_x;
-	int f_y;
-	int l_x = 7;
-	int l_y = 7;
-
 	void refresh(char M[r][c]) {
 
-		if(map.floor[f_y][f_x].npc_map[l_y][l_x] == SHOP_TYPE) {
-			SetConsoleTextAttribute(hConsole, SHOP_COLOR);
-			setCursorPosition(l_x*2, l_y);
-			cout << SHOP;
-		}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == BOSS_TYPE) {
-			SetConsoleTextAttribute(hConsole, BOSS_COLOR);
-			setCursorPosition(l_x*2, l_y);
-			cout << BOSS;;
-		}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == ENEMY_TYPE) {
-			SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
-			setCursorPosition(l_x*2, l_y);
-			cout << ENEMY;
-		}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == OPT_TYPE) {
-			SetConsoleTextAttribute(hConsole, OPT_COLOR);
-			setCursorPosition(l_x*2, l_y);
-			cout << OPT;
-		}else{
-			setCursorPosition(l_x*2, l_y);
- 			cout << ' ';
+			if(map.floor[f_y][f_x].npc_map[l_y][l_x] == SHOP_TYPE) {
+				SetConsoleTextAttribute(hConsole, SHOP_COLOR);
+				setCursorPosition(l_x*2, l_y);
+				cout << SHOP;
+			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == BOSS_TYPE) {
+				SetConsoleTextAttribute(hConsole, BOSS_COLOR);
+				setCursorPosition(l_x*2, l_y);
+				cout << BOSS;;
+			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == ENEMY_TYPE) {
+				SetConsoleTextAttribute(hConsole, ENEMY_COLOR);
+				setCursorPosition(l_x*2, l_y);
+				cout << ENEMY;
+			}else if(map.floor[f_y][f_x].npc_map[l_y][l_x] == OPT_TYPE) {
+				SetConsoleTextAttribute(hConsole, OPT_COLOR);
+				setCursorPosition(l_x*2, l_y);
+				cout << OPT;
+			}else{
+				setCursorPosition(l_x*2, l_y);
+ 				cout << ' ';
+			}
+
+			setCursorPosition(x*2, y);
+			SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
+			cout << PLAYER;
+			SetConsoleTextAttribute(hConsole, 15);
 		}
 
-		setCursorPosition(x*2, y);
-		SetConsoleTextAttribute(hConsole, PLAYER_COLOR);
-		cout << PLAYER;
-		SetConsoleTextAttribute(hConsole, 15);
-	}
-	
+	int get_spawn_distance() {
+    		float distance;
+    		distance = sqrt((f_x-f_r/2)*(f_x-f_r/2) + (f_y-f_c/2)*(f_y-f_c/2));
+    		return (int)distance/10;
+		}
+
 	char move(char M[r][c], int dir) {
 		char dest;
 
 		l_x = x;
 		l_y = y;
-		
-		int get_spawn_distance() {
-    	float distance;
-    	distance = sqrt((f_x-f_r/2)*(f_x-f_r/2) + (f_y-f_c/2)*(f_y-f_c/2));
-    	return (int)distance/10;
-		}
-		
-		char move(char M[r][c], int dir) {
-			char dest;
+
+
 		switch(dir) {
-			case 1:{
-				dest = map.floor[f_y][f_x].npc_map[y-1][x];
-				break;
+				case 1:{
+					dest = map.floor[f_y][f_x].npc_map[y-1][x];
+					break;
+				}
+				case 2:{
+					dest = map.floor[f_y][f_x].npc_map[y][x-1];
+					break;
+				}
+				case 3: {
+					dest = map.floor[f_y][f_x].npc_map[y+1][x];
+					break;
+				}
+				case 4:{
+					dest = map.floor[f_y][f_x].npc_map[y][x+1];
+					break;
+				}
 			}
-			case 2:{
-				dest = map.floor[f_y][f_x].npc_map[y][x-1];
-				break;
-			}
-			case 3: {
-				dest = map.floor[f_y][f_x].npc_map[y+1][x];
-				break;
-			}
-			case 4:{
-				dest = map.floor[f_y][f_x].npc_map[y][x+1];
-				break;
-			}
-		}
-		
+
 		if(dest == WALL_TYPE)
 			return WALL;
-		
+
 		if(dest == DOOR_TYPE && !map.floor[f_y][f_x].done){
 			setCursorPosition(c, r+3);
 			if(map.floor[f_y][f_x].enemies_count == 1)
@@ -288,30 +279,7 @@ public:
 				x--;
 				break;
 			}
-			
-			if(dest == ENEMY) {
-				cls();
-				int lvlvl = get_spawn_distance();
-				cout<<lvlvl;
-				Pause();
-				if(enemy.EnemyControl(*health))
-				{
-					enemy.DisplayEnemy(0);
-					enemy.Stats(lvlvl);
-					enemy.DisplayStats(Health);
-					enemy.Fight(*health);
-					enemy.Rewards(lvl);
-				}
-				if(Exp == 100*LvL)
-					lvlup();
-				display(M);
-				refresh();
-				map.floor[f_y][f_x].enemies[y][x] = 0;
-				map.floor[f_y][f_x].enemies_count--;
-				if(map.floor[f_y][f_x].enemies_count == 0) {
-					map.floor[f_y][f_x].done = true;
-				}
-				fought = true;
+
 			case 3: {
 				y++;
 				break;
@@ -322,20 +290,49 @@ public:
 			}
 		}
 
+		if(dest == ENEMY) {
+				cls();
+				int lvlvl = get_spawn_distance();
+				cout<<lvlvl;
+				Pause();
+
+				if(enemy.EnemyControl(health))
+				{
+					enemy.DisplayEnemy(0);
+					enemy.Stats(lvlvl);
+					enemy.DisplayStats(health);
+					enemy.Fight(&health);
+					enemy.Rewards(lvl);
+				}
+
+				if(Exp == 100*LvL)
+					lvlup();
+
+				display(M);
+				refresh(M);
+
+				map.floor[f_y][f_x].npc_map[y][x] = 0;
+				map.floor[f_y][f_x].enemies_count--;
+				if(map.floor[f_y][f_x].enemies_count == 0) {
+					map.floor[f_y][f_x].done = true;
+				}
+				fought = true;
+		}
+
 		if(dest == SHOP_TYPE) {
 			drawShop();
 			shopping = true;
 		}else if(shopping){
 			drawShop(true);
 		}
-		
+
 		if(dest == ENEMY_TYPE) {
 			cls();
-			enemy.EnemyControl(codes);
+			enemy.EnemyControl(health);
 			enemy.DisplayEnemy(0);
 			enemy.Stats(0.5);
-			enemy.DisplayStats(codes);
-			enemy.Fight();
+			enemy.DisplayStats(health);
+			enemy.Fight(*health);
 			display(M);
 			refresh(M);
 
@@ -348,7 +345,7 @@ public:
 				map.floor[f_y][f_x].done = true;
 			}
 		}
-		
+
 		hasMoved = true;
 		return dest;
 	}
