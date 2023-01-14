@@ -14,6 +14,11 @@ using namespace std;
 DWORD WINAPI SpeedThread(LPVOID lpParam);
 HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
+struct spell{
+	string name;
+	int dmg;
+};
+
 void showConsoleCursor(bool showFlag) {
     HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -90,10 +95,6 @@ void Pause()
 class Spell{
 	public:
 		
-		struct spell{
-			string name;
-			int dmg;
-		};
 		
 		spell spells[5];
 		
